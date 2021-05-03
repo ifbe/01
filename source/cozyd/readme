@@ -1,0 +1,6 @@
+basic:
+	mos
+	not
+	nor
+	nand
+	trans
