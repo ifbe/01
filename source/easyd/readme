@@ -1,1 +1,6 @@
-combinational Logic:
+basic:
+	mos
+	not
+	nor
+	nand
+	trans
