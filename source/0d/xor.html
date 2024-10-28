@@ -1,0 +1,54 @@
+xor(vdd, gnd, a, na, b, nb, o)
+{
+wire:
+	lt
+	rt
+	lb
+	rb
+chip:
+        pl_h : pmos
+        pl_l : pmos
+        pr_h : pmos
+        pr_l : pmos
+        nl_h : nmos
+        nl_l : nmos
+        nr_h : nmos
+        nr_l : nmos
+
+chipview:
+	pl_h(vdd,  lt, na)
+	pl_l( lt,   o,  b)
+	pr_h(vdd,  rt,  a)
+	pr_l( rt,   o, nb)
+	nl_h(  o,  lb,  a)
+	nl_l( lb, gnd,  b)
+	nr_h(  o,  rb, na)
+	nr_l( rb, gnd, nb)
+}
+xnor(vdd, gnd, a, na, b, nb, o)
+{
+wire:
+	lt
+	rt
+	lb
+	rb
+chip:
+        pl_h : pmos
+        pl_l : pmos
+        pr_h : pmos
+        pr_l : pmos
+        nl_h : nmos
+        nl_l : nmos
+        nr_h : nmos
+        nr_l : nmos
+
+chipview:
+	pl_h(vdd,  lt,  a)
+	pl_l( lt,   o,  b)
+	pr_h(vdd,  rt, na)
+	pr_l( rt,   o, nb)
+	nl_h(  o,  lb,  a)
+	nl_l( lb, gnd, nb)
+	nr_h(  o,  rb, na)
+	nr_l( rb, gnd,  b)
+}
