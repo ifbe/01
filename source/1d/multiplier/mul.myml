@@ -1,0 +1,102 @@
+mul_4x4(a:4bit, b:4bit, o:8bit)
+{
+wire:
+	out_y0_x0	//z0
+	out_y0_x1
+	out_y0_x2
+	out_y0_x3
+	out_y1_x0
+	out_y1_x1
+	out_y1_x2
+	out_y1_x3
+	out_y2_x0
+	out_y2_x1
+	out_y2_x2
+	out_y2_x3
+	out_y3_x0
+	out_y3_x1
+	out_y3_x2
+	out_y3_x3
+	top_s0		//z1
+	top_c0
+	top_s1
+	top_c1
+	top_s2
+	top_c2
+	top_s3
+	top_c3
+	mid_s0		//z2
+	mid_c0
+	mid_s1
+	mid_c1
+	mid_s2
+	mid_c2
+	mid_s3
+	mid_c3
+	bot_s0		//z3
+	bot_c0
+	bot_s1		//z4
+	bot_c1
+	bot_s2		//z5
+	bot_c2
+	bot_s3		//z6
+	bot_c3		//z7
+chip:
+	and_y0_x0 : and
+	and_y0_x1 : and
+	and_y0_x2 : and
+	and_y0_x3 : and
+	and_y1_x0 : and
+	and_y1_x1 : and
+	and_y1_x2 : and
+	and_y1_x3 : and
+	top_ha0 : adder_half
+	top_fa1 : adder_full
+	top_fa2 : adder_full
+	top_ha3 : adder_half
+	and_y2_x0 : and
+	and_y2_x1 : and
+	and_y2_x2 : and
+	and_y2_x3 : and
+	mid_ha0 : adder_half
+	mid_fa1 : adder_full
+	mid_fa2 : adder_full
+	mid_fa3 : adder_full
+	and_y3_x0 : and
+	and_y3_x1 : and
+	and_y3_x2 : and
+	and_y3_x3 : and
+	bot_ha0 : adder_half
+	bot_fa1 : adder_full
+	bot_fa2 : adder_full
+	bot_fa3 : adder_full
+chipview:
+	and_y0_x0(y0, x0, out_y0_x0)
+	and_y0_x1(y0, x1, out_y0_x1)
+	and_y0_x2(y0, x2, out_y0_x2)
+	and_y0_x3(y0, x3, out_y0_x3)
+	and_y1_x0(y1, x0, out_y1_x0)
+	and_y1_x1(y1, x1, out_y1_x1)
+	and_y1_x2(y1, x2, out_y1_x2)
+	and_y1_x3(y1, x3, out_y1_x3)
+	top_ha0(out_y0_x1, out_y1_x0,         top_s0, top_c0)
+	top_fa1(out_y0_x2, out_y1_x1, top_c0, top_s1, top_c1)
+	top_fa2(out_y0_x3, out_y1_x2, top_c1, top_s2, top_c2)
+	top_ha3(           out_y1_x3, top_c2, top_s3, top_c3)
+	and_y2_x0(y2, x0, out_y2_x0)
+	and_y2_x1(y2, x1, out_y2_x1)
+	and_y2_x2(y2, x2, out_y2_x2)
+	and_y2_x3(y2, x3, out_y2_x3)
+	mid_ha0(   top_s1, out_y2_x0,         mid_s0, mid_c0)
+	mid_fa1(   top_s2, out_y2_x1, mid_c0, mid_s1, mid_c1)
+	mid_fa2(   top_s3, out_y2_x2, mid_c1, mid_s2, mid_c2)
+	mid_fa3(   top_c3, out_y2_x3, mid_c2, mid_s3, mid_c3)
+	and_y3_x0(y3, x0, out_y3_x0)
+	and_y3_x1(y3, x1, out_y3_x1)
+	and_y3_x2(y3, x2, out_y3_x2)
+	and_y3_x3(y3, x3, out_y3_x3)
+	bot_ha0(   mid_s1, out_y3_x0,         bot_s0, bot_c0)
+	bot_fa1(   mid_s2, out_y3_x1, bot_c0, bot_s1, bot_c1)
+	bot_fa2(   mid_s3, out_y3_x2, bot_c1, bot_s2, bot_c2)
+	bot_fa3(   mid_c3, out_y3_x3, bot_c2, bot_s3, bot_c3)
+}

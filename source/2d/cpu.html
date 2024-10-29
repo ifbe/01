@@ -1,35 +1,37 @@
-controlblock()
+controlblock(o0, o1, o2, o3, op0, op1, op2, flag, en)
 {
 }
 
-reg(out, in)
+arithmeticblock(op0, op1, op2, flag, en)
 {
-}
-
-mux(en, out, i0, i1, i2, i3...)
-{
-}
-
-cpu(clk, addr, data)
-{
-	en : pins
-chip:
-	ctrl : controlblock
-	//
 	add : adder
 	xor : xor
 	op0 : mux
 	op1 : mux
 	op2 : mux
-	//
+}
+
+registerblock(o0, o1, o2, o3, ...)
+{
 	ip : reg
 	iv : reg
 	flag : reg
 	r0 : reg
 	r1 : reg
+}
+
+cpu(clk, addr, data)
+{
+wire:
+	w0, w1, w2, w3 : pins
+	op0, op1, op2 : pins
+	enworker : pins
+chip:
+	ctrl : controlblock
+	work : arithmaticblock
+	reg : registerblock
 chipview:
-	ctrl(iv, en)
-	op0(en.op0, ip, flag, r0, r1, ...)
-	add(en.add, op0, op1, flag.c, op2, flag.c)
-	...
+	ctrl(w0, w1, w2, w3, op0, op1, op2, flag, enworker)
+	work(op0, op1, op2, flag, enworker)
+	reg(w0, w1, w2, w3, ...)
 }
