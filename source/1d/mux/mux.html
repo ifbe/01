@@ -1,0 +1,41 @@
+mux_2to1(a, b, s, o){
+pin:
+	ns
+	tmp0
+	tmp1
+chip:
+	not : not
+	c0 : and
+	c1 : and
+	final : or
+chipview:
+	not(s, ns)
+	c0(a, ns, tmp0)
+	c1(b, s, tmp1)
+	final(tmp1, tmp2, o)
+}
+mux_4to1(a,b,c,d, s0,s1, o){
+pin:
+	ns0
+	ns1
+	tmp0
+	tmp1
+	tmp2
+	tmp3
+chip:
+	not0 : not
+	not1 : not
+	c0 : and3
+	c1 : and3
+	c2 : and3
+	c3 : and3
+	final : or4
+chipview:
+	not0(s0, ns0)
+	not1(s1, ns1)
+	c0(ns0, ns1, a, tmp0)
+	c1( s0, ns1, b, tmp1)
+	c2(ns0,  s1, c, tmp2)
+	c3( s1,  s1, d, tmp3)
+	final(tmp0, tmp1, tmp2, tmp3, o)
+}

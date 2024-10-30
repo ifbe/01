@@ -1,0 +1,20 @@
+sub_full(ix, iy, ib, od, ob){
+pin:
+	tmp0
+	tmp1
+	tmp2
+chip:
+	1or3 : xor3
+	neg : not
+	or_bc : or	//alt: xor_bc
+	neg_or : and
+	and_bc : and
+	final : or
+chipview:
+	1or3(ix, iy, ib, od)
+	neg(ix, tmp0)
+	or_bc(iy, ib, tmp1)
+	neg_or(tmp0, tmp1, tmp2)
+	and_bc(iy, ib, tmp3)
+	final(tmp2, tmp3, ob)
+}

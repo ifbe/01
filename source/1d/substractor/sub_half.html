@@ -1,0 +1,12 @@
+sub_half(x, y, d, b){
+pin:
+	tmp
+chip:
+	xor0 : xor
+	neg : not
+	borrow : and
+chipview:
+	xor0(x, y, d)
+	neg(x, tmp)
+	borrow(tmp, y, b)
+}
