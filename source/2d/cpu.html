@@ -2,13 +2,34 @@ controlblock(o0, o1, o2, o3, op0, op1, op2, flag, en)
 {
 }
 
-arithmeticblock(op0, op1, op2, flag, en)
+routingblock(
+	en : pin[n]
+	op : pin[32][3],
+	reg: pin[32][n])
 {
-	add : adder
-	xor : xor
-	op0 : mux
-	op1 : mux
-	op2 : mux
+chip:
+	m0 : mux_bidir
+	m1 : mux_bidir
+	m2 : mux_bidir
+chipview:
+	m0(en0, op[0], reg[0], reg[1], ...)
+	m1(en1, op[1], reg[0], reg[1], ...)
+	m2(en2, op[2], reg[0], reg[1], ...)
+}
+
+arithmeticblock(op0, op1, op2, en)
+{
+chip:
+	c0 : add
+	c1 : sub
+	c2 : mul
+	c3 : cmp
+	c4 : jmp
+chipview:
+	c0(en[0], op0, op1, op2)
+	c1(en[1], op0, op1, op2)
+	c2(en[2], op0, op1, op2)
+	c3(en[3], op0, op1, op2)
 }
 
 registerblock(o0, o1, o2, o3, ...)
@@ -23,15 +44,25 @@ registerblock(o0, o1, o2, o3, ...)
 cpu(clk, addr, data)
 {
 wire:
-	w0, w1, w2, w3 : pins
-	op0, op1, op2 : pins
-	enworker : pins
+	enari
+	enreg
+	a : 32bit * 3op * n_ari
+	op : 32bit * n_op
+	r : 32bit * n_reg
 chip:
+	//
 	ctrl : controlblock
-	work : arithmaticblock
-	reg : registerblock
+	//
+	route_a : routingblock
+	route_r : routingblock
+	//
+	arith : arithmaticblock
+	regi : registerblock
 chipview:
-	ctrl(w0, w1, w2, w3, op0, op1, op2, flag, enworker)
-	work(op0, op1, op2, flag, enworker)
-	reg(w0, w1, w2, w3, ...)
+	ctrl(iv, enari, enreg)
+	//
+	arith(a)
+	route_a(enari, op, a)
+	route_r(enreg, op, r)
+	regi(r)
 }

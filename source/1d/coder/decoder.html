@@ -1,0 +1,78 @@
+/*
+0 -> 0 1
+1 -> 1 0
+*/
+decoder_1to2(in, o0, o1){
+chip:
+	neg : not
+chipview:
+	neg(in, o0)
+	wire(in, o1)
+}
+
+/*
+00 -> 0 0 0 1
+01 -> 0 0 1 0
+10 -> 0 1 0 0
+11 -> 1 0 0 0
+*/
+decoder_2to4(i0, i1, o0, o1, o2, o3){
+pin:
+	n0
+	n1
+chip:
+	neg0 : not
+	neg1 : not
+	and0 : and
+	and1 : and
+	and2 : and
+	and3 : and
+chipview:
+	neg0(i0, n0)
+	neg1(i1, n1)
+	and0(n0, n1, o0)
+	and1(i0, n1, o1)
+	and2(n0, i1, o2)
+	and3(i0, i1, o3)
+}
+
+/*
+000 -> 0 0 0 0 0 0 0 1
+001 -> 0 0 0 0 0 0 1 0
+010 -> 0 0 0 0 0 1 0 0
+011 -> 0 0 0 0 1 0 0 0
+100 -> 0 0 0 1 0 0 0 0
+101 -> 0 0 1 0 0 0 0 0
+110 -> 0 1 0 0 0 0 0 0
+111 -> 1 0 0 0 0 0 0 0
+*/
+decoder_3to8(i0, i1, i2, o0, o1, o2, o3, o4, o5, o6, o7){
+pin:
+	n0
+	n1
+	n2
+chip:
+	neg0 : not
+	neg1 : not
+	neg2 : not
+	and0 : and3
+	and1 : and3
+	and2 : and3
+	and3 : and3
+	and4 : and3
+	and5 : and3
+	and6 : and3
+	and7 : and3
+chipview:
+	neg0(i0, n0)
+	neg1(i1, n1)
+	neg2(i2, n2)
+	and0(n0, n1, n2, o0)
+	and1(i0, n1, n2, o1)
+	and2(n0, i1, n2, o2)
+	and3(i0, i1, n2, o3)
+	and4(n0, n1, i2, o0)
+	and5(i0, n1, i2, o1)
+	and6(n0, i1, i2, o2)
+	and7(i0, i1, i2, o3)
+}

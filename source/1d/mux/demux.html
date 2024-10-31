@@ -1,0 +1,31 @@
+demux_1to2(in, s, o0, o1){
+pin:
+	ns
+chip:
+	n0 : not
+	c0 : and
+	c1 : and
+chipview:
+	n0(s, ns)
+	c0(in, ns, o0)
+	c1(in,  s, o1)
+}
+demux_1to2(in, s0, s1, o0, o1, o2, o3){
+pin:
+	ns0
+	ns1
+chip:
+	n0 : not
+	n1 : not
+	c0 : and3
+	c1 : and3
+	c2 : and3
+	c3 : and3
+chipview:
+	n0(s0, ns0)
+	n1(s1, ns1)
+	c0(in, ns0, ns1, o0)
+	c1(in,  s0, ns1, o1)
+	c2(in, ns0,  s1, o2)
+	c3(in,  s0,  s1, o3)
+}
