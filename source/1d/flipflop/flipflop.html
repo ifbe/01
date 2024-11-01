@@ -1,0 +1,51 @@
+flipflop_d(clk, d, q, nq)
+{
+pin:
+    e0
+    e1
+    inner
+chip:
+    neg0 : not
+    neg1 : not
+    master : latch_d
+    slave : latch_d
+chipview:
+    neg0(clk, e0)
+    neg1(e0, e1)
+    master(e0, d, inner, -)
+    slave(e1, inner, q, nq)
+}
+
+flipflop_jk(clk, j, k, q, nq)
+{
+pin:
+    inner_s
+    inner_r
+chip:
+    c0 : nand3
+    c1 : nand3
+    rs : latch_rs_nand
+chipview:
+    c0(clk, j, nq, inner_s)
+    c1(clk, k,  q, inner_r)
+}
+
+flipflop_t_bad(clk, d, q, nq)
+{
+chip:
+    jk : flipflop_jk
+chipview:
+    jk(clk, d, d, q, nq)
+}
+
+flipflop_t_good(clk, t, q, nq)
+{
+pin:
+    inner
+chip:
+    xxx : xor
+    dff : flipflop_d
+chipview:
+    xxx(t, q, inner)
+    dff(clk, inner, q, nq)
+}

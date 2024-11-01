@@ -1,0 +1,55 @@
+/*
+r s q nq
+0 0 q nq
+1 0 0 1
+0 1 1 0
+1 1 0 0
+*/
+latch_rs_nor(r, s, q, nq)
+{
+chip:
+    c0 : nor
+    c1 : nor
+chipview:
+    c0(r,nq, q)
+    c1(s, q,nq)
+}
+
+/*
+r s q nq
+0 0 1 1
+1 0 0 1
+0 1 1 0
+1 1 q nq
+*/
+latch_rs_nand(r, s, q, nq)
+{
+chip:
+    c0 : nand
+    c1 : nand
+chipview:
+    c0(r,nq, q)
+    c1(s, q,nq)
+}
+
+/*
+e d q
+0 * q
+1 * d
+*/
+latch_d(en, d, q, nq)
+{
+    ne
+    r
+    s
+chip:
+    neg : not
+    c0 : nand
+    c1 : nand
+    rs : latch_rs_nand
+chipview:
+    neg(en, ne)
+    c0(en, d, s)
+    c1(ne, d, r)
+    rs(r, s, q, nq)
+}
