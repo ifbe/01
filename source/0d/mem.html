@@ -1,38 +1,25 @@
-mem4t(vdd, gnd, q, nq)
+mem4t(q, nq)
 {
 chip:
-        m1,m2 : pmos
-        m3,m4 : nmos
+	p0,p1 : pmos
+	n1,n0 : nmos
 
 chipview:
-        m1(s@vdd, d@q, g@nq)
-        m3(d@q, s@gnd, g@nq)
-        m1(s@vdd, d@nq, g@q)
-        m3(d@nq, s@gnd, g@q)
+	p0(s@vdd, d@q, g@nq)
+	p1(s@vdd, d@nq, g@q)
+	n0(d@q, s@gnd, g@nq)
+	n1(d@nq, s@gnd, g@q)
 }
 
-sram6t(vdd, gnd, bl, nbl, wl)
+sram6t(bl, nbl, wl)
 {
 wire:
-        q, nq : wire
+	q, nq : wire
 chip:
-        m2,m4 : pmos
-        m1,m3,m5,m6 : nmos
-
-wireview:
-        vdd@ m2.s, m4.s
-        gnd@ m1.s, m3.s
-        q  @ m3.d, m4.d, m1.g, m2.g, m6.s
-        nq @ m1.d, m2.d, m3.g, m4.g, m5.s
-        bl @ m6.d
-        nbl@ m5.d
-        wl @ m5.g, m6.g
-
+	mem : mem4t
+	m0,m1 : nmos_dsgb
 chipview:
-        m1(s@gnd, g@q, d@nq)
-        m2(s@vdd, g@q, d@nq)
-        m3(s@gnd, d@q, g@nq)
-        m4(s@vdd, d@q, g@nq)
-        m5(s@nq, d@nbl, g@wl)
-        m6(s@q, d@bl, g@wl)
+	mem(q, nq)
+	m0( bl, q, wl, 0)
+	m0(nbl,nq, wl, 0)
 }
