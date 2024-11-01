@@ -1,0 +1,118 @@
+/*
+i0 i1  o
+ 0  0  1
+ 1  0  1
+ 0  1  1
+ 1  1  0
+*/
+nand(ia, ib, o)
+{
+wire:
+	tmp : wire
+chip:
+	p1, p2 : pmos
+	n1, n2 : nmos
+chipview:
+	p1(s@vdd, d@o, g@ia)
+	p2(s@vdd, d@o, g@ib)
+	n1(  d@o, s@tmp, g@ia)
+	n2(d@tmp, s@gnd, g@ib)
+}
+
+/*
+i0 i1  o
+ 0  0  0
+ 1  0  0
+ 0  1  0
+ 1  1  1
+*/
+and(ia, ib, o)
+{
+pin:
+	tmp
+chip:
+	c0 : nand
+	c1 : not
+chipview:
+	c0(i0, i1, tmp)
+	c1(tmp, o)
+}
+
+/*
+i0 i1 op on
+ 0  0  0  1
+ 1  0  0  1
+ 0  1  0  1
+ 1  1  1  0
+*/
+and_2out(i0, i1, op, on)
+{
+chip:
+	c0 : nand
+	c1 : not
+chipview:
+	c0(i0, i1, on)
+	c1(on, op)
+}
+
+/*
+i0 i1 i2  o
+ 0  0  0  1
+ 1  0  0  1
+ 0  1  0  1
+ 1  1  0  1
+ 0  0  1  1
+ 1  0  1  1
+ 0  1  1  1
+ 1  1  1  1
+*/
+nand3(ia, ib, ic, o)
+{
+wire:
+	t0,t1 : wire
+chip:
+	p0, p1, p2 : pmos
+	n0, n1, n2 : nmos
+chipview:
+	p0(s@vdd, d@o, g@ia)
+	p1(s@vdd, d@o, g@ib)
+	p2(s@vdd, d@o, g@ic)
+	n0(  d@o,  s@t0, g@ia)
+	n1( d@t0,  s@t1, g@ib)
+	n2( d@t1, s@gnd, g@ic)
+}
+
+/*
+i0 i1 i2  o
+ 0  0  0  0
+ 1  0  0  0
+ 0  1  0  0
+ 1  1  0  0
+ 0  0  1  0
+ 1  0  1  0
+ 0  1  1  0
+ 1  1  1  1
+*/
+and3(ia, ib, ic, o)
+{
+wire:
+	tmp : wire
+chip:
+	nand3 : nand3
+	not : not
+chipview:
+	nand3(ia,ib,ic,tmp)
+	not(tmp,o)
+}
+
+and3(ia, ib, ic, op, on)
+{
+wire:
+	tmp : wire
+chip:
+	nand3 : nand3
+	not : not
+chipview:
+	nand3(ia, ib, ic, on)
+	not(on, op)
+}

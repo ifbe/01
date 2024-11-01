@@ -1,16 +1,9 @@
-not(vdd, gnd, i, o)
+not(i, o)
 {
 chip:
-        p : pmos
-        n : nmos
-
+	p : pmos
+	n : nmos
 chipview:
-        p(s@vdd, g@i, d@o)
-        n(s@gnd, g@i, d@o)
-
-wireview:
-        vdd@ p.s
-        gnd@ n.s
-        i  @ p.g, n.g
-        o  @ p.d, n.d
+	p(s@vdd, d@o, g@i)
+	n(d@o, s@gnd, g@i)
 }
