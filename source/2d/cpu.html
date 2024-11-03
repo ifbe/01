@@ -1,7 +1,4 @@
-controlblock(o0, o1, o2, o3, op0, op1, op2, flag, en)
-{
-}
-
+//tool
 routingblock(
 	en : pin[n]
 	op : pin[32][3],
@@ -17,6 +14,17 @@ chipview:
 	m2(en2, op[2], reg[0], reg[1], ...)
 }
 
+//0
+controlblock(o0, o1, o2, o3, op0, op1, op2, flag, en)
+{
+}
+
+//1
+memoryaccess()
+{
+}
+
+//2
 arithmeticblock(op0, op1, op2, en)
 {
 chip:
@@ -32,6 +40,7 @@ chipview:
 	c3(en[3], op0, op1, op2)
 }
 
+//3
 registerblock(o0, o1, o2, o3, ...)
 {
 	ip : reg
@@ -53,13 +62,16 @@ chip:
 	//
 	ctrl : controlblock
 	//
+	memrw : 
+	//
 	route_a : routingblock
 	route_r : routingblock
 	//
 	arith : arithmaticblock
 	regi : registerblock
 chipview:
-	ctrl(iv, enari, enreg)
+	memrw(addr2mem, data2mem, addrfromreg, datatoctrl)
+	ctrl(datatoctrl, enari, enreg)
 	//
 	arith(a)
 	route_a(enari, op, a)

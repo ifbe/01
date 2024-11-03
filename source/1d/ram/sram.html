@@ -1,0 +1,49 @@
+/*
+en addr
+0     x -> highz
+1  0000
+1  0001
+...
+1  1111 -> byte15
+*/
+sram_16byte(en, addr, data){
+pin:
+    tmp : 16bit
+chip:
+    decoder : decoder_4to16
+    B0,B1,B2...B15 : sram_8bit
+chipview:
+    decoder(en, addr, tmp)
+    B0(data, tmp[0])
+    B1(data, tmp[1])
+    ...
+    B15(data, tmp[15])
+}
+
+sram_256byte(en, addr, data){
+pin:
+    tmp : 16bit
+chip:
+    decoder : decoder_4to16
+    B0,B1,B2...B15 : sram_16byte
+chipview:
+    decoder(en, addr.hi4, tmp)
+    B0(tmp[0], addr.lo4, data)
+    B1(tmp[1], addr.lo4, data)
+    ...
+    B15(tmp[15], addr.lo4, data)
+}
+
+sram_1kbyte(en, addr, data){
+pin:
+    tmp : 16bit
+chip:
+    decoder : decoder_4to16
+    B0,B1,B2...B15 : sram_256byte
+chipview:
+    decoder(en, addr.hi4, tmp)
+    B0(tmp[0], addr.lo8, data)
+    B1(tmp[1], addr.lo8, data)
+    ...
+    B15(tmp[15], addr.lo8, data)
+}
