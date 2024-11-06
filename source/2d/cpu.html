@@ -1,9 +1,9 @@
 //tool
-routingblock(
+routingblock{
+export:
 	en : pin[n]
-	op : pin[32][3],
-	reg: pin[32][n])
-{
+	op : pin[32][3]
+	reg: pin[32][n]
 chip:
 	m0 : mux_bidir
 	m1 : mux_bidir
@@ -15,18 +15,21 @@ chipview:
 }
 
 //0
-controlblock(o0, o1, o2, o3, op0, op1, op2, flag, en)
-{
+controlblock{
+export:
+	o0, o1, o2, o3
+	op0, op1, op2
+	flag, en
 }
 
 //1
-memoryaccess()
-{
+memoryaccess{
 }
 
 //2
-arithmeticblock(op0, op1, op2, en)
-{
+arithmeticblock{
+export:
+	op0, op1, op2, en
 chip:
 	c0 : add
 	c1 : sub
@@ -41,8 +44,10 @@ chipview:
 }
 
 //3
-registerblock(o0, o1, o2, o3, ...)
-{
+registerblock{
+export:
+	o0, o1, o2, o3, ...
+inner:
 	ip : reg
 	iv : reg
 	flag : reg
@@ -50,9 +55,10 @@ registerblock(o0, o1, o2, o3, ...)
 	r1 : reg
 }
 
-cpu(clk, addr, data)
-{
-wire:
+cpu{
+export:
+	clk, addr, data
+inner:
 	enari
 	enreg
 	a : 32bit * 3op * n_ari

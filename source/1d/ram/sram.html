@@ -6,44 +6,62 @@ en addr
 ...
 1  1111 -> byte15
 */
-sram_16byte(en, addr, data){
+sram_16byte(addr, data, r, w, en){
 pin:
-    tmp : 16bit
+	en_dec
+	en_bit : 16bit
+	tmpdata
 chip:
-    decoder : decoder_4to16
-    B0,B1,B2...B15 : sram_8bit
+	decstat : or
+	decoder : decoder_4to16
+	B0,B1,B2...B15 : sram_8bit
+	rw
 chipview:
-    decoder(en, addr, tmp)
-    B0(data, tmp[0])
-    B1(data, tmp[1])
-    ...
-    B15(data, tmp[15])
+	decstat(r, w, en_dec)
+	decoder(en_dec, addr, en_bit)
+	B0(tmpdata, en_bit[0])
+	B1(tmpdata, en_bit[1])
+	...
+	B15(tmpdata, en_bit[15])
+	rw(tmpdata, data, r, w, en)
 }
 
-sram_256byte(en, addr, data){
+sram_256byte(addr, data, r, w, en){
 pin:
-    tmp : 16bit
+	en_dec
+	en_bit : 16bit
+	tmpdata
 chip:
-    decoder : decoder_4to16
-    B0,B1,B2...B15 : sram_16byte
+	decstat : or
+	decoder : decoder_4to16
+	B0,B1,B2...B15 : sram_16byte
+	rw
 chipview:
-    decoder(en, addr.hi4, tmp)
-    B0(tmp[0], addr.lo4, data)
-    B1(tmp[1], addr.lo4, data)
-    ...
-    B15(tmp[15], addr.lo4, data)
+	decstat(r, w, en_dec)
+	decoder(en_dec, addr.hi4, en_bit)
+	B0(addr.lo4, tmpdata, r, w, en_bit[0])
+	B1(addr.lo4, tmpdata, r, w, en_bit[1])
+	...
+	B15(addr.lo4, tmpdata, r, w, en_bit[15])
+	rw(tmpdata, data, r, w, en)
 }
 
-sram_1kbyte(en, addr, data){
+sram_1kbyte(addr, data, r, w, en){
 pin:
-    tmp : 16bit
+	en_dec
+	en_bit : 16bit
+	tmpdata
 chip:
-    decoder : decoder_4to16
-    B0,B1,B2...B15 : sram_256byte
+	decstat : or
+	decoder : decoder_4to16
+	B0,B1,B2...B15 : sram_256byte
+	rw
 chipview:
-    decoder(en, addr.hi4, tmp)
-    B0(tmp[0], addr.lo8, data)
-    B1(tmp[1], addr.lo8, data)
-    ...
-    B15(tmp[15], addr.lo8, data)
+	decstat(r, w, en_dec)
+	decoder(en_dec, addr.hi4, en_bit)
+	B0(addr.lo8, tmpdata, r, w, en_bit[0])
+	B1(addr.lo8, tmpdata, r, w, en_bit[1])
+	...
+	B15(addr.lo8, tmpdata, r, w, en_bit[15])
+	rw(tmpdata, data, r, w, en)
 }

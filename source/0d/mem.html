@@ -21,7 +21,23 @@ chip:
 chipview:
 	mem(q, nq)
 	m0( bl, q, wl, 0)
-	m0(nbl,nq, wl, 0)
+	m1(nbl,nq, wl, 0)
+}
+
+sram_2port(ay, an, ae, by, bn, be)
+{
+wire:
+	qy, qn : wire
+chip:
+	mem : mem4t
+	ma0,ma1 : nmos_dsgb
+	mb0,mb1 : nmos_dsgb
+chipview:
+	mem(q, nq)
+	ma0(ay, qy, ae, 0)
+	ma1(an, qn, ae, 0)
+	mb0(by, qy, be, 0)
+	mb1(bn, qn, be, 0)
 }
 
 sram_8bit(data, wl)
@@ -37,4 +53,19 @@ chipview:
 	s0(data[5], -, wl)
 	s0(data[6], -, wl)
 	s0(data[7], -, wl)
+}
+
+sram_8bit_2port(data0, en0, data1, en1)
+{
+chip:
+	s0,s1,s2,s3,s4,s5,s6,s7 : sram_2port
+chipview:
+	s0(data0[0], -, en0, data1[0], -, en1)
+	s0(data0[1], -, en0, data1[1], -, en1)
+	s0(data0[2], -, en0, data1[2], -, en1)
+	s0(data0[3], -, en0, data1[3], -, en1)
+	s0(data0[4], -, en0, data1[4], -, en1)
+	s0(data0[5], -, en0, data1[5], -, en1)
+	s0(data0[6], -, en0, data1[6], -, en1)
+	s0(data0[7], -, en0, data1[7], -, en1)
 }
