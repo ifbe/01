@@ -4,22 +4,36 @@ typedef unsigned char u8;
 
 
 void parse(u8* buf, int len){
-int linehead = 0;
+	int linecount = 0;
+	int bracketcount = 0;
+	int thislinefirstbyte = 0;
+	int thislinefirstname = -1;
 
-int j;
-for(j=0;j<len;j++){
-	switch(buf[j]){
-	case '\n':
-		linehead = j+1;
-		break;
-	case ':':
-	case '{':
-		printf("%.*s\n", j-linehead, buf+linehead);
-		break;
-	case '}':
-		break;
-	}
-}//for
+	int j;
+	for(j=0;j<len;j++){
+		if(0){
+		}
+		else if('\n' == buf[j]){
+			linecount++;
+			thislinefirstbyte = j+1;
+			thislinefirstname = -1;
+		}
+		else if(':' == buf[j]){
+			if(thislinefirstname>=0)printf("a%d_b%d_%.*s\n", linecount+1, bracketcount, j-thislinefirstname, buf+thislinefirstname);
+		}
+		else if('{' == buf[j]){
+			if(thislinefirstname>=0)printf("a%d_b%d_%.*s\n", linecount+1, bracketcount, j-thislinefirstname, buf+thislinefirstname);
+			bracketcount++;
+		}
+		else if('}' == buf[j]){
+			bracketcount--;
+		}
+		else if( ('a' <= buf[j]) && ('z' >= buf[j]) ){
+			if(thislinefirstname<0)thislinefirstname = j;
+		}
+		else{
+		}
+	}//for
 }
 
 

@@ -1,0 +1,119 @@
+/*
+vin----switch------p0----- -ind+ ------------ vout
++                   -                 +
+vsrc              diode              Cap
+-                   +                 -
+|----------------- gnd ---------------------- gnd
+*/
+bulk{
+.param{
+	l = 100 H
+	c = 100 F
+}
+.pinout{
+	vin
+	vout
+	gnd
+}
+.pinhide{
+	p0
+}
+.chip{
+	//V : vsrc
+	D : diode
+	S : switch
+	L : inductor(l)
+	C : capacitor(c)
+}
+.logic{
+	//V(vin, gnd)
+	S(vin, v0)
+	D(gnd, p0)
+	L(vout, p0)
+	C(vout, gnd)
+}
+}
+
+
+/*
+vin---+Ind----p0-----+diode------- vout
++             |         +
+vsrc       switch      Cap
+-             |         -
+|--------------- gnd ------------- gnd
+*/
+boost{
+.param{
+	l = 100 H
+	c = 100 F
+}
+.pinout{
+	vin
+	vout
+	gnd
+}
+.pinhide{
+	p0
+}
+.chip{
+	//V : vsrc
+	D : diode
+	S : switch
+	L : inductor(l)
+	C : capacitor(c)
+}
+.logic{
+	//V(vin, gnd)
+	S(p0, gnd)
+	D(p0, vout)
+	L(vin, p0)
+	C(vout, gnd)
+}
+}
+
+
+/*
+vin----switch------p0---- -diode+ ----------  -vout
++                   +                 -
+vsrc               Ind               Cap
+-                   -                 +
+|----------------- gnd ----------------------  gnd
+*/
+bulkboost{
+.param{
+	l = 100 H
+	c = 100 F
+}
+.pinout{
+	vin
+	vout
+	gnd
+}
+.pinhide{
+	p0
+}
+.chip{
+	//V : vsrc
+	D : diode
+	S : switch
+	L : inductor(l)
+	C : capacitor(c)
+}
+.logic{
+	//V(vin, gnd)
+	S(vin, p0)
+	D(vout, p0)
+	L(p0, gnd)
+	C(vout, gnd)
+}
+.sch{
+	L("xxxx.jpg")
+}
+.pcb{
+	L(vc=(0.0,0.0), vr=(1.0,0.0), vf=(0.0,1.0), model="xxx.pcb")
+	gnd(wire=(-10.0,-10.0#0.0,-10.0#10.0,-10.0), thick=1mm)
+}
+.3d{
+	L("xxx.stl")
+}
+}
