@@ -1,11 +1,20 @@
-xor(vdd, gnd, a, na, b, nb, o)
-{
-wire:
+xor{
+pinout{
+	vdd
+	gnd
+	a
+	na
+	b
+	nb
+	o
+}
+pinin{
 	lt
 	rt
 	lb
 	rb
-chip:
+}
+chip{
 	pl_h : pmos
 	pl_l : pmos
 	pr_h : pmos
@@ -14,8 +23,8 @@ chip:
 	nl_l : nmos
 	nr_h : nmos
 	nr_l : nmos
-
-chipview:
+}
+logic{
 	pl_h(vdd,  lt, na)
 	pl_l( lt,   o,  b)
 	pr_h(vdd,  rt,  a)
@@ -25,14 +34,25 @@ chipview:
 	nr_h(  o,  rb, na)
 	nr_l( rb, gnd, nb)
 }
-xnor(vdd, gnd, a, na, b, nb, o)
-{
-wire:
+}
+
+xnor{
+pinout{
+	vdd
+	gnd
+	a
+	na
+	b
+	nb
+	o
+}
+pinin{
 	lt
 	rt
 	lb
 	rb
-chip:
+}
+chip{
 	pl_h : pmos
 	pl_l : pmos
 	pr_h : pmos
@@ -41,8 +61,8 @@ chip:
 	nl_l : nmos
 	nr_h : nmos
 	nr_l : nmos
-
-chipview:
+}
+logic{
 	pl_h(vdd,  lt,  a)
 	pl_l( lt,   o,  b)
 	pr_h(vdd,  rt, na)
@@ -51,4 +71,5 @@ chipview:
 	nl_l( lb, gnd, nb)
 	nr_h(  o,  rb, na)
 	nr_l( rb, gnd,  b)
+}
 }

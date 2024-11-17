@@ -1,0 +1,23 @@
+esc{
+.pinout{
+	pwr
+	ctrl
+	oa
+	ob
+	oc
+}
+.chip{
+	mcu : stm32f103
+	p0,p1,p2 : pmos
+	n0,n1,n2 : nmos
+}
+.logic{
+	mcu(en0, en1, en2)
+	p0(vcc, oa, en0)
+	n0(oa, gnd, en0)
+	p1(vcc, ob, en1)
+	n1(ob, gnd, en1)
+	p2(vcc, oc, en2)
+	n2(oc, gnd, en2)
+}
+}

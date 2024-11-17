@@ -27,7 +27,7 @@ bulk{
 }
 .logic{
 	//V(vin, gnd)
-	S(vin, v0)
+	S(vin, p0)
 	D(gnd, p0)
 	L(vout, p0)
 	C(vout, gnd)
