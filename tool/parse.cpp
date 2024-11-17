@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include<iostream>
 #include<string>
 #include<vector>
 typedef unsigned char u8;
@@ -11,23 +12,34 @@ public:
 	pindef(u8* buf, int len){
 		name = std::string((char*)buf, len);
 	}
+	pindef(pindef* c){
+		name = c->name;
+	}
 	std::string name;
 };
 
-class chip{
+class chipdef{
 public:
-	chip(u8* buf, int len, u8* cb, int cl){
+	chipdef(u8* buf, int len, u8* cb, int cl){
 		name = std::string((char*)buf, len);
 		cname = std::string((char*)cb, cl);
+	}
+	chipdef(chipdef* c){
+		name = c->name;
+		cname = c->cname;
 	}
 	std::string name;
 	std::string cname;
 };
 
-class wire{
+class wiredef{
 public:
-	wire(u8* buf, int len){
+	wiredef(u8* buf, int len){
 		name = std::string((char*)buf, len);
+	}
+	wiredef(wiredef* c){
+		name = c->name;
+		for(auto p : c->pin)pin.push_back(p);
 	}
 	void addpin(u8* buf, int len){
 		pin.push_back(std::string((char*)buf, len));
@@ -36,28 +48,39 @@ public:
 	std::vector<std::string> pin;
 };
 
-class composite{
+class design{
 public:
-	composite(u8* buf, int len){
+	design(u8* buf, int len){
 		name = std::string((char*)buf, len);
+	}
+	design(design* c){
+		name = c->name;
+		for(auto p : c->_pinout)_pinout.push_back(new pindef(p));
+		for(auto p : c->_pinin)_pinin.push_back(new pindef(p));
+		for(auto p : c->_chip)_chip.push_back(new chipdef(p));
+		for(auto p : c->_logic)_logic.push_back(new wiredef(p));
 	}
 	std::string name;
 	std::vector<pindef*> _pinout;
 	std::vector<pindef*> _pinin;
-	std::vector<chip*> _chip;
-	std::vector<wire*> _logic;
+	std::vector<chipdef*> _chip;
+	std::vector<wiredef*> _logic;
 };
 
 class filecontext{
 public:
-	std::vector<composite*> cx;
+	filecontext(u8* buf){
+		filename = std::string((char*)buf);
+	}
+	std::string filename;
+	std::vector<design*> cx;
 };
 
 void parse(filecontext* ctx, u8* buf, int len){
-	composite* comp = 0;
+	design* comp = 0;
 	pindef* pin = 0;
-	chip* ch = 0;
-	wire* wi = 0;
+	chipdef* ch = 0;
+	wiredef* wi = 0;
 
 	int incomment = 0;
 	int linecount = 0;
@@ -136,7 +159,7 @@ void parse(filecontext* ctx, u8* buf, int len){
 					case ' ':
 					case '\t':
 						if(1 == round){
-							ch = new chip(p+now, k-now, qb, ql);
+							ch = new chipdef(p+now, k-now, qb, ql);
 							comp->_chip.push_back(ch);
 							round = !round;
 						}
@@ -150,7 +173,7 @@ void parse(filecontext* ctx, u8* buf, int len){
 					}
 				}
 				else if(LOGIC == currsection){
-					wi = new wire(buf+firststr, firstkuohao-firststr);
+					wi = new wiredef(buf+firststr, firstkuohao-firststr);
 					/*
 					p0(vcc, oa, en0)
 					*/
@@ -194,7 +217,7 @@ void parse(filecontext* ctx, u8* buf, int len){
 			if(firststr>=0){
 				printf("j=%x line=%d brack=%d token={ name=%d<%.*s>\n", j, linecount+1, bracketcount, j-firststr, j-firststr, buf+firststr);
 				if(0 == bracketcount){
-					comp = new composite(buf+firststr, j-firststr);
+					comp = new design(buf+firststr, j-firststr);
 					ctx->cx.push_back(comp);
 				}
 				else if(1 == bracketcount){
@@ -244,33 +267,55 @@ void parse(filecontext* ctx, u8* buf, int len){
 }
 
 
-void print(filecontext* ctx){
-	for(auto c : ctx->cx){
-		printf("%s{\n", c->name.c_str());
+void printdesign(design* c){
+	printf("%s{\n", c->name.c_str());
 
-		printf("pinout:%ld\n", c->_pinout.size());
-		for(auto p : c->_pinout){
-			printf("	%s\n", p->name.c_str());
-		}
-
-		printf("pinin:%ld\n", c->_pinin.size());
-		for(auto p : c->_pinin){
-			printf("	%s\n", p->name.c_str());
-		}
-
-		printf("chip:%ld\n", c->_chip.size());
-		for(auto p : c->_chip){
-			printf("	%s : %s\n", p->name.c_str(), p->cname.c_str());
-		}
-
-		printf("logic:%ld\n", c->_logic.size());
-		for(auto p : c->_logic){
-			printf("	%s(", p->name.c_str());
-			for(auto t : p->pin)printf("%s%s", t.c_str(), (t==p->pin.back()) ? ")\n" : " ");
-		}
-
-		printf("}\n");
+	printf("pinout:%ld\n", c->_pinout.size());
+	for(auto p : c->_pinout){
+		printf("	%s\n", p->name.c_str());
 	}
+
+	printf("pinin:%ld\n", c->_pinin.size());
+	for(auto p : c->_pinin){
+		printf("	%s\n", p->name.c_str());
+	}
+
+	printf("chip:%ld\n", c->_chip.size());
+	for(auto p : c->_chip){
+		printf("	%s : %s\n", p->name.c_str(), p->cname.c_str());
+	}
+
+	printf("logic:%ld\n", c->_logic.size());
+	for(auto p : c->_logic){
+		printf("	%s(", p->name.c_str());
+		for(auto t : p->pin)printf("%s%s", t.c_str(), (t==p->pin.back()) ? ")\n" : " ");
+	}
+
+	printf("}\n");
+}
+void printfilectx(filecontext* ctx){
+	printf("filename=%s\n", ctx->filename.c_str());
+	printf("\n");
+	for(auto c : ctx->cx){
+		printdesign(c);
+		printf("\n");
+	}
+}
+
+
+void expand(filecontext* ctx, std::string name){
+	int j;
+	int chosen = -1;
+	for(j=0;j<ctx->cx.size();j++){
+		if(name == ctx->cx[j]->name){
+			printf("chosen=%d\n", j);
+			chosen = j;
+		}
+	}
+	if(chosen<0)return;
+
+	design* tmp = new design(ctx->cx[chosen]);
+	printdesign(tmp);
 }
 
 
@@ -285,9 +330,14 @@ int main(int argc, char** argv)
 	FILE* fp = fopen(argv[1], "rb");
 	int sz = fread(buf, 1, 0x100000, fp);
 
-	filecontext* ctx = new filecontext;
+	filecontext* ctx = new filecontext((u8*)argv[1]);
 	parse(ctx, buf, sz);
-	print(ctx);
+	printfilectx(ctx);
+
+	std::string input;
+	printf("design name to expand:");
+	std::cin >> input;
+	expand(ctx, input);
 
 	fclose(fp);
 }

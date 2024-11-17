@@ -1,9 +1,14 @@
-not(i, o)
-{
-chip:
+not{
+pinout{
+	i
+	o
+}
+chip{
 	p : pmos
 	n : nmos
-chipview:
+}
+logic{
 	p(s@vdd, d@o, g@i)
 	n(d@o, s@gnd, g@i)
+}
 }
