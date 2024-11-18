@@ -12,6 +12,9 @@ public:
 	pindef(u8* buf, int len){
 		name = std::string((char*)buf, len);
 	}
+	pindef(std::string s){
+		name = s;
+	}
 	pindef(pindef* c){
 		name = c->name;
 	}
@@ -23,6 +26,10 @@ public:
 	chipdef(u8* buf, int len, u8* cb, int cl){
 		name = std::string((char*)buf, len);
 		cname = std::string((char*)cb, cl);
+	}
+	chipdef(std::string s0, std::string s1){
+		name = s0;
+		cname = s1;
 	}
 	chipdef(chipdef* c){
 		name = c->name;
@@ -37,15 +44,29 @@ public:
 	wiredef(u8* buf, int len){
 		name = std::string((char*)buf, len);
 	}
+	wiredef(std::string s){
+		name = s;
+	}
 	wiredef(wiredef* c){
 		name = c->name;
-		for(auto p : c->pin)pin.push_back(p);
+		for(auto p : c->pinname)pinname.push_back(p);
+	}
+	void addpin(std::string s){
+		pinname.push_back(s);
 	}
 	void addpin(u8* buf, int len){
-		pin.push_back(std::string((char*)buf, len));
+		int j;
+		for(j=0;j<len;j++){
+			if('@' == buf[j]){
+				buf += j+1;
+				len -= j+1;
+				break;
+			}
+		}
+		pinname.push_back(std::string((char*)buf, len));
 	}
 	std::string name;
-	std::vector<std::string> pin;
+	std::vector<std::string> pinname;
 };
 
 class design{
@@ -74,6 +95,11 @@ public:
 	}
 	std::string filename;
 	std::vector<design*> cx;
+};
+
+class session{
+public:
+	std::vector<filecontext*> file;
 };
 
 void parse(filecontext* ctx, u8* buf, int len){
@@ -121,21 +147,21 @@ void parse(filecontext* ctx, u8* buf, int len){
 			else if(firststr>=0){
 				printf("j=%x line=%d brack=%d token=lf wholeline=%d<%.*s>\n", j, linecount+1, bracketcount, j-firststr, j-firststr, buf+firststr);
 				if(PINOUT == currsection){
+					int strend = j;
 					if(firstmaohao >= 0){
-						pin = new pindef(buf+firststr, firstmaohao-firststr);
+						strend = firstmaohao;
 					}
-					else{
-						pin = new pindef(buf+firststr, j-firststr);
-					}
+					while( (' '==buf[strend-1]) | ('\t'==buf[strend-1]) )strend--;
+					pin = new pindef(buf+firststr, strend-firststr);
 					comp->_pinout.push_back(pin);
 				}
 				else if(PININ == currsection){
+					int strend = j;
 					if(firstmaohao >= 0){
-						pin = new pindef(buf+firststr, firstmaohao-firststr);
+						strend = firstmaohao;
 					}
-					else{
-						pin = new pindef(buf+firststr, j-firststr);
-					}
+					while( (' '==buf[strend-1]) | ('\t'==buf[strend-1]) )strend--;
+					pin = new pindef(buf+firststr, strend-firststr);
 					comp->_pinin.push_back(pin);
 				}
 				else if(CHIP == currsection){
@@ -288,7 +314,8 @@ void printdesign(design* c){
 	printf("logic:%ld\n", c->_logic.size());
 	for(auto p : c->_logic){
 		printf("	%s(", p->name.c_str());
-		for(auto t : p->pin)printf("%s%s", t.c_str(), (t==p->pin.back()) ? ")\n" : " ");
+		for(auto t : p->pinname)printf("%s%c", t.c_str(), (t==p->pinname.back()) ? ')' : ' ');
+		printf("\n");
 	}
 
 	printf("}\n");
@@ -302,20 +329,128 @@ void printfilectx(filecontext* ctx){
 	}
 }
 
-
-void expand(filecontext* ctx, std::string name){
+std::string translatepinname(std::string s0, design* in, wiredef* wi)
+{
+	//1 pinout: name unchanged
 	int j;
-	int chosen = -1;
-	for(j=0;j<ctx->cx.size();j++){
-		if(name == ctx->cx[j]->name){
-			printf("chosen=%d\n", j);
-			chosen = j;
+	for(j=0;j<in->_pinout.size();j++){
+		if(s0 == in->_pinout[j]->name){
+			return wi->pinname[j];
 		}
 	}
-	if(chosen<0)return;
 
-	design* tmp = new design(ctx->cx[chosen]);
-	printdesign(tmp);
+	//2 pinin: refname/pinname
+	for(j=0;j<in->_pinin.size();j++){
+		if(s0 == in->_pinin[j]->name){
+			return wi->name + "/" + s0;
+		}
+	}
+
+	//3 notfound: maybe vcc,gnd...
+	return "?" + s0;
+}
+void expand_real(design* out, design* in, wiredef* wi){
+	printf("in: name=%s\n", in->name.c_str());
+	printf("wi: name=%s, pin=%s...\n", wi->name.c_str(), wi->pinname[0].c_str());
+
+	//inner pin: rename and insert
+	for(auto p : in->_pinin){
+		out->_pinin.push_back(new pindef(wi->name + "/" + p->name));
+	}
+
+	//inner chip: rename and insert
+	for(auto p : in->_chip){
+		out->_chip.push_back(new chipdef(wi->name + "/" + p->name, p->cname));
+	}
+
+	//inner logic: ???
+	for(auto p : in->_logic){
+		wiredef* tmp = new wiredef(wi->name + "/" + p->name);
+
+		for(auto q : p->pinname){
+			std::string s = translatepinname(q, in, wi);
+			tmp->addpin(s);
+		}
+
+		out->_logic.push_back(tmp);
+	}
+}
+
+void expand_onelayer(session* sess, design* ds, int last){
+	int sz = ds->_chip.size();
+	int j;
+	int foundinsess = -1;
+	int foundinfile = -1;
+	int foundinlogic = -1;
+	for(j=last;j<sz;j++){
+		printf("cname=%s{{\n", ds->_chip[j]->cname.c_str());
+
+		foundinsess = -1;
+		foundinfile = -1;
+		int k,f;
+		for(f=0;f<sess->file.size();f++){
+			filecontext* ctx = sess->file[f];
+			for(k=0;k<ctx->cx.size();k++){
+				if(ds->_chip[j]->cname == ctx->cx[k]->name){
+					printf("at file %d, design %d\n", f, k);
+					foundinsess = f;
+					foundinfile = k;
+					break;
+				}
+			}
+		}
+		if(foundinfile < 0){
+			printf("not found in file\n");
+			goto prepnext;
+		}
+
+		foundinlogic = -1;
+		for(k=0;k<ds->_logic.size();k++){
+			if(ds->_chip[j]->name == ds->_logic[k]->name){
+				printf("at logic %d\n", k);
+				foundinlogic = k;
+				break;
+			}
+		}
+		if(foundinlogic < 0){
+			printf("not found in logic\n");
+			goto prepnext;
+		}
+
+		expand_real(ds, sess->file[foundinsess]->cx[foundinfile], ds->_logic[foundinlogic]);
+
+		//comment this chip and this wire
+		ds->_chip[j]->name = "//" + ds->_chip[j]->name;
+		ds->_logic[foundinlogic]->name = "//" + ds->_logic[foundinlogic]->name;
+
+prepnext:
+		printf("}}\n");
+	}
+}
+
+void expand(session* sess, std::string name){
+	int j;
+	design* found = 0;
+	for(auto ctx : sess->file){
+		for(j=0;j<ctx->cx.size();j++){
+			if(name == ctx->cx[j]->name){
+				found = ctx->cx[j];
+			}
+		}
+	}
+	if(0 == found)return;
+	printf("\n");
+
+	design* theone = new design(found);
+	int last = 0;
+	while(1){
+		expand_onelayer(sess, theone, last);
+		last = theone->_chip.size();
+		break;
+	}
+	printf("\n");
+
+	printdesign(theone);
 }
 
 
@@ -327,17 +462,23 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	FILE* fp = fopen(argv[1], "rb");
-	int sz = fread(buf, 1, 0x100000, fp);
+	session* sess = new session();
+	int j;
+	for(j=1;j<argc;j++){
+		FILE* fp = fopen(argv[j], "rb");
+		int sz = fread(buf, 1, 0x100000, fp);
 
-	filecontext* ctx = new filecontext((u8*)argv[1]);
-	parse(ctx, buf, sz);
-	printfilectx(ctx);
+		filecontext* ctx = new filecontext((u8*)argv[j]);
+		parse(ctx, buf, sz);
+		printfilectx(ctx);
+		sess->file.push_back(ctx);
 
-	std::string input;
+		fclose(fp);
+	}
+
+
 	printf("design name to expand:");
+	std::string input;
 	std::cin >> input;
-	expand(ctx, input);
-
-	fclose(fp);
+	expand(sess, input);
 }

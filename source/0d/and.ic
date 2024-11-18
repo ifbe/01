@@ -47,7 +47,7 @@ chip{
 	c1 : not
 }
 logic{
-	c0(i0, i1, tmp)
+	c0(ia, ib, tmp)
 	c1(tmp, o)
 }
 }
