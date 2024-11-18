@@ -5,18 +5,25 @@ i0 i1  o
  0  1  0
  1  1  0
 */
-nor(ia, ib, o)
-{
-wire:
+nor{
+pinout{
+	ia
+	ib
+	o
+}
+pinin{
 	tmp : wire
-chip:
+}
+chip{
 	p1, p2 : pmos
 	n1, n2 : nmos
-chipview:
+}
+logic{
 	p1(s@vdd, d@tmp, g@ia)
 	p2(s@tmp,   d@o, g@ib)
 	n1(d@o, s@gnd, g@ia)
 	n2(d@o, s@gnd, g@ib)
+}
 }
 
 /*
@@ -26,16 +33,23 @@ i0 i1  o
  0  1  1
  1  1  1
 */
-or(ia, ib, o)
-{
-wire:
+or{
+pinout{
+	ia
+	ib
+	o
+}
+pinin{
 	tmp : wire
-chip:
+}
+chip{
 	nor : nor
 	not : not
-chipview:
+}
+logic{
 	nor(ia, ib, tmp)
 	not(tmp, o)
+}
 }
 
 /*
@@ -45,12 +59,19 @@ i0 i1 op on
  0  1  1  0
  1  1  1  0
 */
-or_2out(ia, ib, op, on)
-{
-chip:
+or_2out{
+pinout{
+	ia
+	ib
+	op
+	on
+}
+chip{
 	nor : nor
 	not : not
-chipview:
+}
+logic{
 	nor(ia, ib, on)
 	not(op, o)
+}
 }

@@ -179,8 +179,9 @@ void parse(filecontext* ctx, u8* buf, int len){
 					int k;
 					int now = 0;
 					int round = 0;
-					for(k=0;k<firstmaohao-firststr;k++){
+					for(k=0;k<firstmaohao-firststr+1;k++){
 					switch(p[k]){
+					case ':':
 					case ',':
 					case ' ':
 					case '\t':
@@ -442,11 +443,12 @@ void expand(session* sess, std::string name){
 	printf("\n");
 
 	design* theone = new design(found);
-	int last = 0;
-	while(1){
-		expand_onelayer(sess, theone, last);
-		last = theone->_chip.size();
-		break;
+	int prev = 0;
+	int curr = 0;
+	for(int j=0;j<3;j++){
+		curr = theone->_chip.size();
+		expand_onelayer(sess, theone, prev);
+		prev = curr;
 	}
 	printf("\n");
 

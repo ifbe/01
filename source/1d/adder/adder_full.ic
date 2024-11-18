@@ -1,0 +1,24 @@
+adder_full{
+pinout{
+	ia
+	ib
+	ic
+	os
+	oc
+}
+pinin{
+	ts
+	tc1
+	tc2
+}
+chip{
+	a0: adder_half
+	a1: adder_half
+	a2 : or
+}
+logic{
+	a0(ia, ib, ts, tc1)
+	a1(ts, ic, os, tc2)
+	a2(tc1, tc2, oc)
+}
+}

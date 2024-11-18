@@ -1,20 +1,20 @@
 xor{
 pinout{
-	vdd
-	gnd
 	a
-	na
 	b
-	nb
 	o
 }
 pinin{
+	na
+	nb
 	lt
 	rt
 	lb
 	rb
 }
 chip{
+	neg0 : not
+	neg1 : not
 	pl_h : pmos
 	pl_l : pmos
 	pr_h : pmos
@@ -25,6 +25,8 @@ chip{
 	nr_l : nmos
 }
 logic{
+	neg0(a, na);
+	neg1(b, nb);
 	pl_h(vdd,  lt, na)
 	pl_l( lt,   o,  b)
 	pr_h(vdd,  rt,  a)
@@ -38,21 +40,21 @@ logic{
 
 xnor{
 pinout{
-	vdd
-	gnd
 	a
-	na
 	b
-	nb
 	o
 }
 pinin{
+	na
+	nb
 	lt
 	rt
 	lb
 	rb
 }
 chip{
+	neg0 : not
+	neg1 : not
 	pl_h : pmos
 	pl_l : pmos
 	pr_h : pmos
@@ -63,6 +65,8 @@ chip{
 	nr_l : nmos
 }
 logic{
+	neg0(a, na);
+	neg1(b, nb);
 	pl_h(vdd,  lt,  a)
 	pl_l( lt,   o,  b)
 	pr_h(vdd,  rt, na)
