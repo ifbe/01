@@ -1,10 +1,13 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include<math.h>
+//
 #include<iostream>
-#include<string>
 #include<vector>
 typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
 
 
 #define CONFIG_PRINT_CONSTRUCT 1
@@ -615,30 +618,212 @@ design* expand(session* sess, std::string name){
 struct pos{
 	float x,y,z;
 };
-void draw(design* ds){
+void drawline(u8* pix, u32 rgb, int x0, int y0, int x1, int y1)
+{
+	int width = 1024;
+	int height = 1024;
+	int stride = 1024;
+	u32* buf = (u32*)pix;
+
+	int dx,dy,sx,sy,e1,e2;
+	if(x0 < x1){dx = x1-x0;sx = 1;}
+	else {dx = x0-x1;sx = -1;}
+	if(y0 < y1){dy = y1-y0;sy = 1;}
+	else {dy = y0-y1;sy = -1;}
+	if(dx > dy){e1 = dx/2;}
+	else {e1 = -dy/2;}
+
+	rgb |= 0xff000000;
+	while(1)
+	{
+		if((x0 == x1)&&(y0 == y1))break;
+
+		if((x0 >= 0)&&(x0 < width)&&(y0 >= 0)&&(y0 < height))
+		{buf[(y0*stride) + x0] = rgb;}
+
+		e2 = e1;
+		if(e2 >-dx){e1 -= dy;x0 += sx;}
+		if(e2 < dy){e1 += dx;y0 += sy;}
+	}
+}
+void drawline_rect(u8* pix, u32 rgb, int x1, int y1, int x2, int y2)
+{
+	int width = 1024;
+	int height = 1024;
+	int stride = 1024;
+	u32* buf = (u32*)pix;
+
+	int x,y,n;
+	int startx,endx,starty,endy;
+	if(x1<x2){startx=x1;endx=x2;}
+	else{startx=x2;endx=x1;}
+	if(y1<y2){starty=y1;endy=y2;}
+	else{starty=y2;endy=y1;}
+	//logtoall("(%x,%x),(%x,%x)\n",startx,starty,endx,endy);
+
+	rgb |= 0xff000000;
+	for(n=0;n<1;n++)
+	{
+		if((starty+n >= 0) && (starty+n < height))
+		{
+			for(x=startx;x<endx;x++)
+			{
+				if(x >= width)break;
+				if(x < 0)x=0;
+				buf[((starty+n)*stride) + x] = rgb;
+			}
+		}
+		if((endy-n >= 0) && (endy-n < height))
+		{
+			for(x=startx;x<endx;x++)
+			{
+				if(x > width-1)break;
+				if(x < 0)x=0;
+				buf[((endy-n-1)*stride) + x] = rgb;
+			}
+		}
+		if((startx+n >= 0) && (startx+n < width))
+		{
+			for(y=starty;y<endy;y++)
+			{
+				if(y >= height)break;
+				if(y < 0)y = 0;
+				buf[(y*stride) + startx+n] = rgb;
+			}
+		}
+		if((endx-n >= 0) && (endx-n < width))
+		{
+			for(y=starty;y<endy;y++)
+			{
+				if(y >= height)break;
+				if(y < 0)y = 0;
+				buf[(y*stride) + endx-n] = rgb;
+			}
+		}
+	}
+}
+void writeppm(unsigned char* buf, int pitch, int w, int h)
+{
+	printf("buf=%p,pitch=0x%x,w=%d,h=%d\n", buf, pitch, w, h);
+	FILE* fp = fopen("out.ppm", "wb");
+
+	char tmp[0x100];
+	int ret = snprintf(tmp, 0x100, "P6\n%d\n%d\n255\n", w, h);
+	fwrite(tmp, 1, ret, fp);
+
+	int x,y;
+	unsigned char* row;
+	for(y = 0; y < h; y++) {
+		row = buf + pitch*y;
+		for(x = 0; x < w; x++) {
+			fwrite(row+2, 1, 1, fp);
+			fwrite(row+1, 1, 1, fp);
+			fwrite(row+0, 1, 1, fp);
+			row += 4;
+		}
+	}
+
+	fclose(fp);
+}
+void draw(design* ds, u8* pix){
 	int cnt_po = ds->_pinout.size();
 	int cnt_pi = ds->_pinin.size();
 	int cnt_chip = ds->_chip.size();
 	int cnt_logic = ds->_logic.size();
 	printf("draw: %d,%d,%d,%d\n", cnt_po, cnt_pi, cnt_chip, cnt_logic);
 
+	float fx,fy;
+	int ix,iy,sz;
+
 	std::vector<pos> pos_po;
-	for(int j=0;j<ds->_pinout.size();j++){
-		pos_po.push_back({(float)(j+1)/(cnt_po+2), 0, 0});
+	for(int j=0;j<cnt_po;j++){
+		pos_po.push_back({(float)(j+1)/(cnt_po+1), 0, 0});
 		printf("po %d: %f,%f,%f\n", j, pos_po.back().x, pos_po.back().y, pos_po.back().z);
 	}
 
 	std::vector<pos> pos_pi;
-	for(int j=0;j<ds->_pinin.size();j++){
-		pos_pi.push_back({(float)(j+1)/(cnt_pi+2), 0.999, 0});
+	for(int j=0;j<cnt_pi;j++){
+		pos_pi.push_back({(float)(j+1)/(cnt_pi+1), 0.999, 0});
 		printf("pi %d: %f,%f,%f\n", j, pos_pi.back().x, pos_pi.back().y, pos_pi.back().z);
 	}
+
+	float sq = sqrt(cnt_chip);
+	int ce = ceil(sq);
+	printf("sqrt=%f,ceil=%d\n", sq, ce);
+
+	std::vector<pos> pos_chip;
+	for(int j=0;j<cnt_chip;j++){
+		fx = (float)((j%ce)+1)/(ce+1);
+		fy = (float)((j/ce)+1)/(ce+1);
+		printf("chip %d: %f,%f\n", j, fx, fy);
+
+		pos_chip.push_back({fx, fy, 0});
+
+		ix = 1024*fx;
+		iy = 1024*fy;
+		sz = 1024/ce/4;
+		drawline_rect(pix, 0xff0000, ix-sz, iy-sz, ix+sz, iy+sz);
+	}
+
+	int ox;
+	int oy;
+	int dx;
+	for(int j=0;j<cnt_logic;j++){
+		//one chip
+		int findchip = -1;
+		for(int k=0;k<ds->_chip.size();k++){
+			if(ds->_logic[j]->name == ds->_chip[k]->name){
+				findchip = k;
+				break;
+			}
+		}
+		if(findchip<0){
+			printf("chip not found\n");
+			break;
+		}
+		ix = 1024*pos_chip[findchip].x;
+		iy = 1024*pos_chip[findchip].y;
+		sz = 1024/ce/4;
+
+		//each pin
+		std::vector<std::string> pinname = ds->_logic[j]->pinname;
+		
+
+		std::vector<pindef*> po = ds->_pinout;
+		std::vector<pindef*> pi = ds->_pinin;
+		for(int k=0;k<pinname.size();k++){
+			dx = (k+1) * (sz*2) / (pinname.size()+1);
+			drawline_rect(pix, 0xff0000, ix-sz+dx, iy-sz, ix-sz+dx, iy-sz-10);
+			//pinout
+			for(int m=0;m<po.size();m++){
+				if(pinname[k] == po[m]->name){
+					ox = 1024*pos_po[m].x;
+					oy = 1024*pos_po[m].y;
+					printf("po %d: %f,%f\n", m, pos_po[m].x, pos_po[m].y);
+					drawline(pix, 0xaaaa00, ix-sz+dx, iy-sz, ox, oy);
+					break;
+				}
+			}
+			//pinin
+			for(int m=0;m<pi.size();m++){
+				if(pinname[k] == pi[m]->name){
+					ox = 1024*pos_pi[m].x;
+					oy = 1024*pos_pi[m].y;
+					printf("pi %d: %f,%f\n", m, pos_pi[m].x, pos_pi[m].y);
+					drawline(pix, 0x00aaaa, ix-sz+dx, iy-sz, ox, oy);
+					break;
+				}
+			}
+		}
+	}
+
+	writeppm(pix, 1024*4, 1024, 1024);
 }
 
 
 
 
-u8 buf[0x100000];
+u8 buf[1024*1024*4];
 int main(int argc, char** argv)
 {
 	if(argc<=1){
@@ -668,7 +853,7 @@ int main(int argc, char** argv)
 	design* it = expand(sess, input);
 	if(0 == it)return 0;
 
-	draw(it);
+	draw(it, buf);
 
 	delete it;
 	return 0;
