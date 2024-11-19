@@ -9,7 +9,7 @@ typedef unsigned char u8;
 
 #define CONFIG_PRINT_CONSTRUCT 1
 #define CONFIG_PRINT_DESTRUCT 0
-#define CONFIG_PRINT_HIDE_COMMENTED 1
+#define CONFIG_PRINT_HIDE_COMMENTED 0
 
 
 class pindef{
@@ -147,6 +147,26 @@ public:
 		//_chip.resize(0);
 		//_logic.resize(0);
 	}
+	void shrinkunused(){
+		for(auto it = _chip.begin();it != _chip.end();){
+			if('/' == (*it)->name.c_str()[0]){
+				delete (*it);
+				it = _chip.erase(it);
+			}
+			else{
+				it++;
+			}
+		}
+		for(auto it = _logic.begin();it != _logic.end();){
+			if('/' == (*it)->name.c_str()[0]){
+				delete (*it);
+				it = _logic.erase(it);
+			}
+			else{
+				it++;
+			}
+		}
+	}
 	std::string name;
 	std::vector<pindef*> _pinout;
 	std::vector<pindef*> _pinin;
@@ -157,7 +177,16 @@ public:
 class filecontext{
 public:
 	filecontext(u8* buf){
+#if CONFIG_PRINT_CONSTRUCT==1
+		printf("contruct_buf filectx %s\n", buf);
+#endif
 		filename = std::string((char*)buf);
+	}
+	~filecontext(){
+#if CONFIG_PRINT_DESTRUCT==1
+		printf("delete filectx %s\n", filename.c_str());
+#endif
+		for(auto p : cx)delete(p);
 	}
 	std::string filename;
 	std::vector<design*> cx;
@@ -165,6 +194,17 @@ public:
 
 class session{
 public:
+	session(){
+#if CONFIG_PRINT_CONSTRUCT==1
+		printf("contruct_noarg session\n");
+#endif
+	}
+	~session(){
+#if CONFIG_PRINT_DESTRUCT==1
+		printf("delete session\n");
+#endif
+		for(auto p : file)delete(p);
+	}
 	std::vector<filecontext*> file;
 };
 
@@ -496,6 +536,10 @@ void expand_onelayer(session* sess, design* ds, int last){
 			filecontext* ctx = sess->file[f];
 			for(k=0;k<ctx->cx.size();k++){
 				if(ds->_chip[j]->cname == ctx->cx[k]->name){
+					if(ctx->cx[k]->_chip.size() == 0){
+						printf("this is already base element\n");
+						continue;
+					}
 					printf("at file %d, design %d\n", f, k);
 					foundinsess = f;
 					foundinfile = k;
@@ -532,7 +576,7 @@ prepnext:
 	}
 }
 
-void expand(session* sess, std::string name){
+design* expand(session* sess, std::string name){
 	int j;
 	design* found = 0;
 	for(auto ctx : sess->file){
@@ -542,7 +586,7 @@ void expand(session* sess, std::string name){
 			}
 		}
 	}
-	if(0 == found)return;
+	if(0 == found)return 0;
 	printf("\n");
 
 	design* theone = new design(found);
@@ -557,7 +601,38 @@ void expand(session* sess, std::string name){
 
 	printdesign(theone);
 
-	delete theone;
+	theone->shrinkunused();
+
+	printdesign(theone);
+
+	//delete theone;
+	return theone;
+}
+
+
+
+
+struct pos{
+	float x,y,z;
+};
+void draw(design* ds){
+	int cnt_po = ds->_pinout.size();
+	int cnt_pi = ds->_pinin.size();
+	int cnt_chip = ds->_chip.size();
+	int cnt_logic = ds->_logic.size();
+	printf("draw: %d,%d,%d,%d\n", cnt_po, cnt_pi, cnt_chip, cnt_logic);
+
+	std::vector<pos> pos_po;
+	for(int j=0;j<ds->_pinout.size();j++){
+		pos_po.push_back({(float)(j+1)/(cnt_po+2), 0, 0});
+		printf("po %d: %f,%f,%f\n", j, pos_po.back().x, pos_po.back().y, pos_po.back().z);
+	}
+
+	std::vector<pos> pos_pi;
+	for(int j=0;j<ds->_pinin.size();j++){
+		pos_pi.push_back({(float)(j+1)/(cnt_pi+2), 0.999, 0});
+		printf("pi %d: %f,%f,%f\n", j, pos_pi.back().x, pos_pi.back().y, pos_pi.back().z);
+	}
 }
 
 
@@ -590,5 +665,11 @@ int main(int argc, char** argv)
 	printf("name to expand:");
 	std::string input;
 	std::cin >> input;
-	expand(sess, input);
+	design* it = expand(sess, input);
+	if(0 == it)return 0;
+
+	draw(it);
+
+	delete it;
+	return 0;
 }
