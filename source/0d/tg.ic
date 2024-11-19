@@ -3,12 +3,19 @@ en ne
  0  1 -> highz
  1  0 -> pass
 */
-tg(w0, w1, en, ne)
-{
-chip:
+tg{
+pinout{
+    w0
+    w1
+    en
+    ne
+}
+chip{
     p : pmos_sdgb
     n : nmos_dsgb
-chipview:
+}
+logic{
     p(w0, w1, ne, vcc)
     n(w0, w1, en, gnd)
+}
 }

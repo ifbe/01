@@ -7,16 +7,35 @@
 typedef unsigned char u8;
 
 
+#define CONFIG_PRINT_CONSTRUCT 1
+#define CONFIG_PRINT_DESTRUCT 0
+#define CONFIG_PRINT_HIDE_COMMENTED 1
+
+
 class pindef{
 public:
 	pindef(u8* buf, int len){
+#if CONFIG_PRINT_CONSTRUCT==1
+		printf("contruct_buflen pindef %.*s\n", len,buf);
+#endif
 		name = std::string((char*)buf, len);
 	}
 	pindef(std::string s){
+#if CONFIG_PRINT_CONSTRUCT==1
+		printf("contruct_string pindef %s\n", s.c_str());
+#endif
 		name = s;
 	}
 	pindef(pindef* c){
+#if CONFIG_PRINT_CONSTRUCT==1
+		printf("contruct_copy pindef %s\n", c->name.c_str());
+#endif
 		name = c->name;
+	}
+	~pindef(){
+#if CONFIG_PRINT_DESTRUCT==1
+		printf("delete pindef %s\n", name.c_str());
+#endif
 	}
 	std::string name;
 };
@@ -24,16 +43,30 @@ public:
 class chipdef{
 public:
 	chipdef(u8* buf, int len, u8* cb, int cl){
+#if CONFIG_PRINT_CONSTRUCT==1
+		printf("contruct_buflen chipdef %.*s %.*s\n", len,buf, cl,cb);
+#endif
 		name = std::string((char*)buf, len);
 		cname = std::string((char*)cb, cl);
 	}
 	chipdef(std::string s0, std::string s1){
+#if CONFIG_PRINT_CONSTRUCT==1
+		printf("contruct_string chipdef %s %s\n", s0.c_str(), s1.c_str());
+#endif
 		name = s0;
 		cname = s1;
 	}
 	chipdef(chipdef* c){
+#if CONFIG_PRINT_CONSTRUCT==1
+		printf("contruct_copy chipdef %s %s\n", c->name.c_str(), c->cname.c_str());
+#endif
 		name = c->name;
 		cname = c->cname;
+	}
+	~chipdef(){
+#if CONFIG_PRINT_DESTRUCT==1
+		printf("delete chipdef %s %s\n", name.c_str(), cname.c_str());
+#endif
 	}
 	std::string name;
 	std::string cname;
@@ -42,14 +75,28 @@ public:
 class wiredef{
 public:
 	wiredef(u8* buf, int len){
+#if CONFIG_PRINT_CONSTRUCT==1
+		printf("contruct_buflen wiredef %.*s\n", len,buf);
+#endif
 		name = std::string((char*)buf, len);
 	}
 	wiredef(std::string s){
+#if CONFIG_PRINT_CONSTRUCT==1
+		printf("contruct_string wiredef %s\n", s.c_str());
+#endif
 		name = s;
 	}
 	wiredef(wiredef* c){
+#if CONFIG_PRINT_CONSTRUCT==1
+		printf("contruct_copy wiredef %s\n", c->name.c_str());
+#endif
 		name = c->name;
 		for(auto p : c->pinname)pinname.push_back(p);
+	}
+	~wiredef(){
+#if CONFIG_PRINT_DESTRUCT==1
+		printf("delete wiredef %s\n", name.c_str());
+#endif
 	}
 	void addpin(std::string s){
 		pinname.push_back(s);
@@ -72,14 +119,33 @@ public:
 class design{
 public:
 	design(u8* buf, int len){
+#if CONFIG_PRINT_CONSTRUCT==1
+		printf("contruct_buflen design %.*s\n", len,buf);
+#endif
 		name = std::string((char*)buf, len);
 	}
 	design(design* c){
+#if CONFIG_PRINT_CONSTRUCT==1
+		printf("contruct_copy design %s\n", c->name.c_str());
+#endif
 		name = c->name;
 		for(auto p : c->_pinout)_pinout.push_back(new pindef(p));
 		for(auto p : c->_pinin)_pinin.push_back(new pindef(p));
 		for(auto p : c->_chip)_chip.push_back(new chipdef(p));
 		for(auto p : c->_logic)_logic.push_back(new wiredef(p));
+	}
+	~design(){
+#if CONFIG_PRINT_DESTRUCT==1
+		printf("delete design %s\n", name.c_str());
+#endif
+		for(auto p : _pinout)delete(p);
+		for(auto p : _pinin)delete(p);
+		for(auto p : _chip)delete(p);
+		for(auto p : _logic)delete(p);
+		//_pinout.resize(0);
+		//_pinin.resize(0);
+		//_chip.resize(0);
+		//_logic.resize(0);
 	}
 	std::string name;
 	std::vector<pindef*> _pinout;
@@ -101,6 +167,9 @@ class session{
 public:
 	std::vector<filecontext*> file;
 };
+
+
+
 
 void parse(filecontext* ctx, u8* buf, int len){
 	design* comp = 0;
@@ -294,30 +363,58 @@ void parse(filecontext* ctx, u8* buf, int len){
 }
 
 
+
+
 void printdesign(design* c){
 	printf("%s{\n", c->name.c_str());
 
-	printf("pinout:%ld\n", c->_pinout.size());
+	int cnt = 0;
+	printf("pinout:size=%ld\n", c->_pinout.size());
 	for(auto p : c->_pinout){
 		printf("	%s\n", p->name.c_str());
+		cnt++;
 	}
+	printf("pinout:cnt=%d\n", cnt);
 
-	printf("pinin:%ld\n", c->_pinin.size());
+	cnt = 0;
+	printf("pinin:size=%ld\n", c->_pinin.size());
 	for(auto p : c->_pinin){
 		printf("	%s\n", p->name.c_str());
+		cnt++;
 	}
+	printf("pinin:cnt=%d\n", cnt);
 
-	printf("chip:%ld\n", c->_chip.size());
+	cnt = 0;
+	printf("chip:size=%ld\n", c->_chip.size());
 	for(auto p : c->_chip){
+		if('/' != p->name.c_str()[0]){
+			cnt++;
+		}
+#if CONFIG_PRINT_HIDE_COMMENTED==1
+		else{
+			continue;
+		}
+#endif
 		printf("	%s : %s\n", p->name.c_str(), p->cname.c_str());
 	}
+	printf("chip:cnt=%d\n", cnt);
 
-	printf("logic:%ld\n", c->_logic.size());
+	cnt = 0;
+	printf("logic:size=%ld\n", c->_logic.size());
 	for(auto p : c->_logic){
+		if('/' != p->name.c_str()[0]){
+			cnt++;
+		}
+#if CONFIG_PRINT_HIDE_COMMENTED==1
+		else{
+			continue;
+		}
+#endif
 		printf("	%s(", p->name.c_str());
 		for(auto t : p->pinname)printf("%s%c", t.c_str(), (t==p->pinname.back()) ? ')' : ' ');
 		printf("\n");
 	}
+	printf("logic:cnt=%d\n", cnt);
 
 	printf("}\n");
 }
@@ -329,6 +426,12 @@ void printfilectx(filecontext* ctx){
 		printf("\n");
 	}
 }
+void printsession(session* sess){
+	for(auto f : sess->file)printfilectx(f);
+}
+
+
+
 
 std::string translatepinname(std::string s0, design* in, wiredef* wi)
 {
@@ -453,7 +556,11 @@ void expand(session* sess, std::string name){
 	printf("\n");
 
 	printdesign(theone);
+
+	delete theone;
 }
+
+
 
 
 u8 buf[0x100000];
@@ -472,14 +579,15 @@ int main(int argc, char** argv)
 
 		filecontext* ctx = new filecontext((u8*)argv[j]);
 		parse(ctx, buf, sz);
-		printfilectx(ctx);
+		//printfilectx(ctx);
 		sess->file.push_back(ctx);
 
 		fclose(fp);
 	}
+	printsession(sess);
 
 
-	printf("design name to expand:");
+	printf("name to expand:");
 	std::string input;
 	std::cin >> input;
 	expand(sess, input);

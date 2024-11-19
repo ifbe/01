@@ -38,6 +38,29 @@ logic{
 }
 }
 
+xor_withtg{
+pinout{
+	a
+	b
+	o
+}
+pinin{
+	tmp
+}
+chip{
+	p0, p1 : pmos
+	n0, n1 : nmos
+	tg0 : tg
+}
+logic{
+	p0(vcc, tmp, a)
+	n0(tmp, gnd, a)
+	p1(a, o, b)
+	n1(o, tmp, b)
+	tg0(b, o, tmp, a)
+}
+}
+
 xnor{
 pinout{
 	a
