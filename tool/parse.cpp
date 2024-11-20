@@ -621,6 +621,7 @@ struct pos{
 struct line{
 	float sx,sy;
 	float dx,dy;
+	int pinid;
 };
 class position{
 public:
@@ -703,7 +704,7 @@ void layout(design* ds, position* pos){
 					ox = 1024*pos->_out[m].x;
 					oy = 1024*pos->_out[m].y;
 					printf("c %d - po %d : %f,%f - %f,%f\n", j, m, fx, fy, ox, oy);
-					l.push_back({fx, fy, ox, oy});
+					l.push_back({fx, fy, ox, oy, m});
 					goto ok;
 				}
 			}
@@ -713,13 +714,13 @@ void layout(design* ds, position* pos){
 					ox = 1024*pos->_in[m].x;
 					oy = 1024*pos->_in[m].y;
 					printf("c %d - pi %d : %f,%f - %f,%f\n", j, m, fx, fy, ox, oy);
-					l.push_back({fx, fy, ox, oy});
+					l.push_back({fx, fy, ox, oy, cnt_po+m});
 					goto ok;
 				}
 			}
 			//power
 			printf("c %d - pi : %f,%f - %f,%f\n", j, fx, fy, fx, fy+10);
-			l.push_back({fx, fy, fx, fy+10});
+			l.push_back({fx, fy, fx, fy+10, cnt_po+cnt_pi});
 ok:
 			continue;
 		}
@@ -729,7 +730,58 @@ ok:
 
 
 
+u32 hsv_to_rgb(float h, float s, float v) {
+	float c = v * s;
+	float x = c * (1 - fabs(fmod(h / 60.0, 2) - 1));
+	float m = v - c;
 
+	float r1, g1, b1;
+	if (h >= 0 && h < 60) {
+		r1 = c;
+		g1 = x;
+		b1 = 0;
+	} else if (h >= 60 && h < 120) {
+		r1 = x;
+		g1 = c;
+		b1 = 0;
+	} else if (h >= 120 && h < 180) {
+		r1 = 0;
+		g1 = c;
+		b1 = x;
+	} else if (h >= 180 && h < 240) {
+		r1 = 0;
+		g1 = x;
+		b1 = c;
+	} else if (h >= 240 && h < 300) {
+		r1 = x;
+		g1 = 0;
+		b1 = c;
+	} else {
+		r1 = c;
+		g1 = 0;
+		b1 = x;
+	}
+
+	u32 ir = (u32)((r1 + m) * 255);
+	u32 ig = (u32)((g1 + m) * 255);
+	u32 ib = (u32)((b1 + m) * 255);
+	return (ir<<16) | (ig<<8) | ib;
+}
+std::vector<u32> buildcolortable(int size, int special){
+	std::vector<u32> tab;
+	for(int j=0;j<size;j++){
+		tab.push_back(hsv_to_rgb(360.0*j/size, 1.0, 1.0));
+	}
+	if(special)tab.push_back(0xffffff);
+	return tab;
+}
+void drawcolor(u8* pix, u32 rgb)
+{
+	int width = 1024;
+	int height = 1024;
+	u32* buf = (u32*)pix;
+	for(int j=0;j<width*height;j++)buf[j] = rgb;
+}
 void drawline(u8* pix, u32 rgb, int x0, int y0, int x1, int y1)
 {
 	int width = 1024;
@@ -844,6 +896,8 @@ void draw(design* ds, position* pos, u8* pix){
 	int cnt_logic = ds->_logic.size();
 	printf("draw: %d,%d,%d,%d\n", cnt_po, cnt_pi, cnt_chip, cnt_logic);
 
+	drawcolor(pix, 0);
+
 	float fx,fy;
 	int ix,iy,sz;
 
@@ -860,6 +914,7 @@ void draw(design* ds, position* pos, u8* pix){
 		drawline_rect(pix, 0xff0000, ix-sz, iy-sz, ix+sz, iy+sz);
 	}
 
+	std::vector<u32> colortable = buildcolortable(cnt_po+cnt_pi, 1);
 	int ox;
 	int oy;
 	for(int j=0;j<cnt_logic;j++){
@@ -869,7 +924,7 @@ void draw(design* ds, position* pos, u8* pix){
 			ox = pos->wire[j][k].dx;
 			oy = pos->wire[j][k].dy;
 			//printf("%d,%d: %d,%d - %d,%d\n", j, k, ix, iy, ox, oy);
-			drawline(pix, 0xff00ff, ix,iy, ox,oy);
+			drawline(pix, colortable[pos->wire[j][k].pinid], ix,iy, ox,oy);
 		}
 	}
 
