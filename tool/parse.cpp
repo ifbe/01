@@ -618,6 +618,118 @@ design* expand(session* sess, std::string name){
 struct pos{
 	float x,y,z;
 };
+struct line{
+	float sx,sy;
+	float dx,dy;
+};
+class position{
+public:
+	std::vector<pos> _out;
+	std::vector<pos> _in;
+	std::vector<pos> _chip;
+	std::vector<std::vector<line>> wire;
+};
+void layout(design* ds, position* pos){
+	int cnt_po = ds->_pinout.size();
+	int cnt_pi = ds->_pinin.size();
+	int cnt_chip = ds->_chip.size();
+	int cnt_logic = ds->_logic.size();
+	printf("layout: %d,%d,%d,%d\n", cnt_po, cnt_pi, cnt_chip, cnt_logic);
+
+	float fx,fy;
+	int ix,iy,sz;
+
+	//pinout at top
+	for(int j=0;j<cnt_po;j++){
+		fx = (float)(j+1)/(cnt_po+1);
+		fy = 0.0;
+		pos->_out.push_back({fx, 0, 0});
+		printf("out %d: %f,%f\n", j, fx, fy);
+	}
+
+	//pinin at bot
+	for(int j=0;j<cnt_pi;j++){
+		fx = (float)(j+1)/(cnt_pi+1);
+		fy = 0.999;
+		pos->_in.push_back({fx, fy, 0});
+		printf("out %d: %f,%f\n", j, fx, fy);
+	}
+
+	//chip at middle
+	float sq = sqrt(cnt_chip);
+	int ce = ceil(sq);
+	printf("sqrt=%f,ceil=%d\n", sq, ce);
+
+	for(int j=0;j<cnt_chip;j++){
+		fx = (float)((j%ce)+1)/(ce+1);
+		fy = (float)((j/ce)+1)/(ce+1);
+		printf("chip %d: %f,%f\n", j, fx, fy);
+		pos->_chip.push_back({fx, fy, 0});
+	}
+
+	//each chip has many outpin, each outpin have and src and dst
+	float ox;
+	float oy;
+	int delta;
+	for(int j=0;j<cnt_logic;j++){
+		//one chip
+		int findchip = -1;
+		for(int k=0;k<ds->_chip.size();k++){
+			if(ds->_logic[j]->name == ds->_chip[k]->name){
+				findchip = k;
+				break;
+			}
+		}
+		if(findchip<0){
+			printf("chip not found\n");
+			break;
+		}
+		ix = 1024*pos->_chip[findchip].x;
+		iy = 1024*pos->_chip[findchip].y;
+		sz = 1024/ce/4;
+
+		//each pin
+		std::vector<std::string> pinname = ds->_logic[j]->pinname;
+		std::vector<pindef*> po = ds->_pinout;
+		std::vector<pindef*> pi = ds->_pinin;
+		std::vector<line> l;
+		for(int k=0;k<pinname.size();k++){
+			delta = (k+1) * (sz*2) / (pinname.size()+1);
+			fx = ix-sz+delta;
+			fy = iy-sz;
+			//pinout
+			for(int m=0;m<po.size();m++){
+				if(pinname[k] == po[m]->name){
+					ox = 1024*pos->_out[m].x;
+					oy = 1024*pos->_out[m].y;
+					printf("c %d - po %d : %f,%f - %f,%f\n", j, m, fx, fy, ox, oy);
+					l.push_back({fx, fy, ox, oy});
+					goto ok;
+				}
+			}
+			//pinin
+			for(int m=0;m<pi.size();m++){
+				if(pinname[k] == pi[m]->name){
+					ox = 1024*pos->_in[m].x;
+					oy = 1024*pos->_in[m].y;
+					printf("c %d - pi %d : %f,%f - %f,%f\n", j, m, fx, fy, ox, oy);
+					l.push_back({fx, fy, ox, oy});
+					goto ok;
+				}
+			}
+			//power
+			printf("c %d - pi : %f,%f - %f,%f\n", j, fx, fy, fx, fy+10);
+			l.push_back({fx, fy, fx, fy+10});
+ok:
+			continue;
+		}
+		pos->wire.push_back(l);
+	}
+}
+
+
+
+
 void drawline(u8* pix, u32 rgb, int x0, int y0, int x1, int y1)
 {
 	int width = 1024;
@@ -725,7 +837,7 @@ void writeppm(unsigned char* buf, int pitch, int w, int h)
 
 	fclose(fp);
 }
-void draw(design* ds, u8* pix){
+void draw(design* ds, position* pos, u8* pix){
 	int cnt_po = ds->_pinout.size();
 	int cnt_pi = ds->_pinin.size();
 	int cnt_chip = ds->_chip.size();
@@ -735,30 +847,13 @@ void draw(design* ds, u8* pix){
 	float fx,fy;
 	int ix,iy,sz;
 
-	std::vector<pos> pos_po;
-	for(int j=0;j<cnt_po;j++){
-		pos_po.push_back({(float)(j+1)/(cnt_po+1), 0, 0});
-		printf("po %d: %f,%f,%f\n", j, pos_po.back().x, pos_po.back().y, pos_po.back().z);
-	}
-
-	std::vector<pos> pos_pi;
-	for(int j=0;j<cnt_pi;j++){
-		pos_pi.push_back({(float)(j+1)/(cnt_pi+1), 0.999, 0});
-		printf("pi %d: %f,%f,%f\n", j, pos_pi.back().x, pos_pi.back().y, pos_pi.back().z);
-	}
-
 	float sq = sqrt(cnt_chip);
 	int ce = ceil(sq);
 	printf("sqrt=%f,ceil=%d\n", sq, ce);
 
-	std::vector<pos> pos_chip;
 	for(int j=0;j<cnt_chip;j++){
-		fx = (float)((j%ce)+1)/(ce+1);
-		fy = (float)((j/ce)+1)/(ce+1);
-		printf("chip %d: %f,%f\n", j, fx, fy);
-
-		pos_chip.push_back({fx, fy, 0});
-
+		fx = pos->_chip[j].x;
+		fy = pos->_chip[j].y;
 		ix = 1024*fx;
 		iy = 1024*fy;
 		sz = 1024/ce/4;
@@ -767,53 +862,14 @@ void draw(design* ds, u8* pix){
 
 	int ox;
 	int oy;
-	int dx;
 	for(int j=0;j<cnt_logic;j++){
-		//one chip
-		int findchip = -1;
-		for(int k=0;k<ds->_chip.size();k++){
-			if(ds->_logic[j]->name == ds->_chip[k]->name){
-				findchip = k;
-				break;
-			}
-		}
-		if(findchip<0){
-			printf("chip not found\n");
-			break;
-		}
-		ix = 1024*pos_chip[findchip].x;
-		iy = 1024*pos_chip[findchip].y;
-		sz = 1024/ce/4;
-
-		//each pin
-		std::vector<std::string> pinname = ds->_logic[j]->pinname;
-		
-
-		std::vector<pindef*> po = ds->_pinout;
-		std::vector<pindef*> pi = ds->_pinin;
-		for(int k=0;k<pinname.size();k++){
-			dx = (k+1) * (sz*2) / (pinname.size()+1);
-			drawline_rect(pix, 0xff0000, ix-sz+dx, iy-sz, ix-sz+dx, iy-sz-10);
-			//pinout
-			for(int m=0;m<po.size();m++){
-				if(pinname[k] == po[m]->name){
-					ox = 1024*pos_po[m].x;
-					oy = 1024*pos_po[m].y;
-					printf("po %d: %f,%f\n", m, pos_po[m].x, pos_po[m].y);
-					drawline(pix, 0xaaaa00, ix-sz+dx, iy-sz, ox, oy);
-					break;
-				}
-			}
-			//pinin
-			for(int m=0;m<pi.size();m++){
-				if(pinname[k] == pi[m]->name){
-					ox = 1024*pos_pi[m].x;
-					oy = 1024*pos_pi[m].y;
-					printf("pi %d: %f,%f\n", m, pos_pi[m].x, pos_pi[m].y);
-					drawline(pix, 0x00aaaa, ix-sz+dx, iy-sz, ox, oy);
-					break;
-				}
-			}
+		for(int k=0;k<pos->wire[j].size();k++){
+			ix = pos->wire[j][k].sx;
+			iy = pos->wire[j][k].sy;
+			ox = pos->wire[j][k].dx;
+			oy = pos->wire[j][k].dy;
+			//printf("%d,%d: %d,%d - %d,%d\n", j, k, ix, iy, ox, oy);
+			drawline(pix, 0xff00ff, ix,iy, ox,oy);
 		}
 	}
 
@@ -853,7 +909,9 @@ int main(int argc, char** argv)
 	design* it = expand(sess, input);
 	if(0 == it)return 0;
 
-	draw(it, buf);
+	position pos = position();
+	layout(it, &pos);
+	draw(it, &pos, buf);
 
 	delete it;
 	return 0;
