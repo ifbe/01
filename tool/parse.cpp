@@ -619,16 +619,20 @@ struct pos{
 	float x,y,z;
 };
 struct line{
-	float sx,sy;
+	//float sx,sy;
 	int chipid;
+	int footid;
 	int pinid;
 };
 class position{
 public:
 	std::vector<pos> _out;
 	std::vector<pos> _in;
+	std::vector<std::vector<line>> pinviewwire;
+	//
 	std::vector<pos> _chip;
-	std::vector<std::vector<line>> wire;
+	std::vector<std::vector<pos>> _chipfoot;
+	std::vector<std::vector<line>> chipviewwire;		//[chip][foot][cid,fid,pid]
 };
 void layout(design* ds, position* pos){
 	int cnt_po = ds->_pinout.size();
@@ -638,7 +642,6 @@ void layout(design* ds, position* pos){
 	printf("layout: %d,%d,%d,%d\n", cnt_po, cnt_pi, cnt_chip, cnt_logic);
 
 	float fx,fy;
-	int ix,iy,sz;
 
 	//pinout at top
 	for(int j=0;j<cnt_po;j++){
@@ -659,6 +662,7 @@ void layout(design* ds, position* pos){
 	//chip at middle
 	float sq = sqrt(cnt_chip);
 	int ce = ceil(sq);
+	int sz = 1024/ce/4;
 	printf("sqrt=%f,ceil=%d\n", sq, ce);
 
 	for(int j=0;j<cnt_chip;j++){
@@ -667,8 +671,10 @@ void layout(design* ds, position* pos){
 		printf("chip %d: %f,%f\n", j, fx, fy);
 		pos->_chip.push_back({fx, fy, 0});
 	}
+	pos->_chipfoot.resize(cnt_chip);
 
 	//each chip has many outpin, each outpin have and src and dst
+	printf("generate chipviewwire\n");
 	int delta;
 	for(int j=0;j<cnt_logic;j++){
 		//one chip
@@ -683,9 +689,6 @@ void layout(design* ds, position* pos){
 			printf("chip not found\n");
 			break;
 		}
-		ix = 1024*pos->_chip[findchip].x;
-		iy = 1024*pos->_chip[findchip].y;
-		sz = 1024/ce/4;
 
 		//each pin
 		std::vector<std::string> pinname = ds->_logic[j]->pinname;
@@ -693,32 +696,47 @@ void layout(design* ds, position* pos){
 		std::vector<pindef*> pi = ds->_pinin;
 		std::vector<line> l;
 		for(int k=0;k<pinname.size();k++){
-			delta = (k+1) * (sz*2) / (pinname.size()+1);
-			fx = -sz+delta;
+			fx = -sz + (float)(k+1) * (sz*2) / (pinname.size()+1);		//must convert to float, or crash
 			fy = -sz;
+			pos->_chipfoot[findchip].push_back({fx, fy, 0.0});
+
 			//pinout
 			for(int m=0;m<po.size();m++){
 				if(pinname[k] == po[m]->name){
-					printf("c %d - po %d : %f,%f\n", j, m, fx, fy);
-					l.push_back({fx, fy, findchip, m});
+					printf("%d: chip%d.foot%d-pi%d : %f,%f\n", j, findchip, k, m, fx, fy);
+					l.push_back({findchip, k, m});
 					goto ok;
 				}
 			}
 			//pinin
 			for(int m=0;m<pi.size();m++){
 				if(pinname[k] == pi[m]->name){
-					printf("c %d - pi %d : %f,%f\n", j, m, fx, fy);
-					l.push_back({fx, fy, findchip, cnt_po+m});
+					printf("%d: chip%d.foot%d-pi%d : %f,%f\n", j, findchip, k, m, fx, fy);
+					l.push_back({findchip, k, cnt_po+m});
 					goto ok;
 				}
 			}
 			//power
-			printf("c %d - pi : %f,%f\n", j, fx, fy);
-			l.push_back({fx, fy, findchip, cnt_po+cnt_pi});
+			printf("%d: chip%d.foot%d-p%d : %f,%f\n", j, findchip, k, cnt_po+cnt_pi, fx, fy);
+			l.push_back({findchip, k, cnt_po+cnt_pi});
 ok:
 			continue;
 		}
-		pos->wire.push_back(l);
+		pos->chipviewwire.push_back(l);
+	}
+
+	printf("convert chipviewwire to pinviewwire\n");
+	pos->pinviewwire.resize(cnt_po+cnt_pi+1);
+	for(int j=0;j<pos->chipviewwire.size();j++){
+		for(int k=0;k<pos->chipviewwire[j].size();k++){
+			int pinid = pos->chipviewwire[j][k].pinid;
+			pos->pinviewwire[pinid].push_back(pos->chipviewwire[j][k]);
+		}
+	}
+	for(int j=0;j<pos->pinviewwire.size();j++){
+		for(int k=0;k<pos->pinviewwire[j].size();k++){
+			printf("%d,%d: %d,%d\n", j, k, pos->pinviewwire[j][k].chipid, pos->pinviewwire[j][k].footid);
+		}
 	}
 }
 
@@ -892,13 +910,12 @@ void draw(design* ds, position* pos, u8* pix){
 
 	drawcolor(pix, 0);
 
-	float fx,fy;
-	int ix,iy,sz;
-
 	float sq = sqrt(cnt_chip);
 	int ce = ceil(sq);
 	printf("sqrt=%f,ceil=%d\n", sq, ce);
 
+	float fx,fy;
+	int ix,iy,sz;
 	for(int j=0;j<cnt_chip;j++){
 		fx = pos->_chip[j].x;
 		fy = pos->_chip[j].y;
@@ -908,16 +925,19 @@ void draw(design* ds, position* pos, u8* pix){
 		drawline_rect(pix, 0x888888, ix-sz, iy-sz, ix+sz, iy+sz);
 	}
 
-	std::vector<u32> colortable = buildcolortable(cnt_po+cnt_pi, 1);
 	int ox;
 	int oy;
-	for(int j=0;j<cnt_logic;j++){
-		for(int k=0;k<pos->wire[j].size();k++){
-			int chipid = pos->wire[j][k].chipid;
-			ix = 1024*pos->_chip[chipid].x + pos->wire[j][k].sx;
-			iy = 1024*pos->_chip[chipid].y + pos->wire[j][k].sy;
+	std::vector<u32> colortable = buildcolortable(cnt_po+cnt_pi, 1);
+
+/*
+	for(int j=0;j<pos->chipviewwire.size();j++){
+		for(int k=0;k<pos->chipviewwire[j].size();k++){
+			int chipid = pos->chipviewwire[j][k].chipid;
+			int footid = pos->chipviewwire[j][k].footid;
+			ix = 1024*pos->_chip[chipid].x + pos->_chipfoot[chipid][footid].x;
+			iy = 1024*pos->_chip[chipid].y + pos->_chipfoot[chipid][footid].y;
 			//
-			int pinid = pos->wire[j][k].pinid;
+			int pinid = pos->chipviewwire[j][k].pinid;
 			if(pinid < cnt_po){		//in pinout
 				ox = 1024*pos->_out[pinid].x;
 				oy = 1024*pos->_out[pinid].y;
@@ -931,8 +951,36 @@ void draw(design* ds, position* pos, u8* pix){
 				oy = iy-10;
 			}
 			//
-			printf("%d,%d : %d,%d : %d,%d - %d,%d\n", j, k, chipid, pinid, ix, iy, ox, oy);
-			drawline(pix, colortable[pos->wire[j][k].pinid], ix,iy, ox,oy);
+			printf("%d,%d : chip%d.foot%d-pin%d : %d,%d - %d,%d\n", j,k, chipid,footid,pinid, ix, iy, ox, oy);
+			drawline(pix, colortable[pinid], ix,iy, ox,oy);
+		}
+	}
+*/
+	for(int j=0;j<pos->pinviewwire.size()-1;j++){
+		int pinid = j;
+		if(pinid < cnt_po){		//in pinout
+			ox = 1024*pos->_out[pinid].x;
+			oy = 1024*pos->_out[pinid].y;
+		}
+		else if(pinid < cnt_po+cnt_pi){		//in pinin
+			ox = 1024*pos->_in[pinid-cnt_po].x;
+			oy = 1024*pos->_in[pinid-cnt_po].y;
+		}
+		else{		//maybe power pin
+			ox = ix;
+			oy = iy-10;
+		}
+		for(int k=0;k<pos->pinviewwire[j].size();k++){
+			int chipid = pos->pinviewwire[j][k].chipid;
+			int footid = pos->pinviewwire[j][k].footid;
+			ix = 1024*pos->_chip[chipid].x + pos->_chipfoot[chipid][footid].x;
+			iy = 1024*pos->_chip[chipid].y + pos->_chipfoot[chipid][footid].y;//
+			printf("%d,%d : chip%d.foot%d-pin%d : %d,%d - %d,%d\n", j,k, chipid,footid,pinid, ix, iy, ox, oy);
+			if( (pinid<cnt_po) | (k>0) ){
+			drawline(pix, colortable[pinid], ix,iy, ox,oy);
+			}
+			ox = ix;
+			oy = iy;
 		}
 	}
 
