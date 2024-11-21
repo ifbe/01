@@ -620,7 +620,7 @@ struct pos{
 };
 struct line{
 	float sx,sy;
-	float dx,dy;
+	int chipid;
 	int pinid;
 };
 class position{
@@ -669,8 +669,6 @@ void layout(design* ds, position* pos){
 	}
 
 	//each chip has many outpin, each outpin have and src and dst
-	float ox;
-	float oy;
 	int delta;
 	for(int j=0;j<cnt_logic;j++){
 		//one chip
@@ -696,31 +694,27 @@ void layout(design* ds, position* pos){
 		std::vector<line> l;
 		for(int k=0;k<pinname.size();k++){
 			delta = (k+1) * (sz*2) / (pinname.size()+1);
-			fx = ix-sz+delta;
-			fy = iy-sz;
+			fx = -sz+delta;
+			fy = -sz;
 			//pinout
 			for(int m=0;m<po.size();m++){
 				if(pinname[k] == po[m]->name){
-					ox = 1024*pos->_out[m].x;
-					oy = 1024*pos->_out[m].y;
-					printf("c %d - po %d : %f,%f - %f,%f\n", j, m, fx, fy, ox, oy);
-					l.push_back({fx, fy, ox, oy, m});
+					printf("c %d - po %d : %f,%f\n", j, m, fx, fy);
+					l.push_back({fx, fy, findchip, m});
 					goto ok;
 				}
 			}
 			//pinin
 			for(int m=0;m<pi.size();m++){
 				if(pinname[k] == pi[m]->name){
-					ox = 1024*pos->_in[m].x;
-					oy = 1024*pos->_in[m].y;
-					printf("c %d - pi %d : %f,%f - %f,%f\n", j, m, fx, fy, ox, oy);
-					l.push_back({fx, fy, ox, oy, cnt_po+m});
+					printf("c %d - pi %d : %f,%f\n", j, m, fx, fy);
+					l.push_back({fx, fy, findchip, cnt_po+m});
 					goto ok;
 				}
 			}
 			//power
-			printf("c %d - pi : %f,%f - %f,%f\n", j, fx, fy, fx, fy+10);
-			l.push_back({fx, fy, fx, fy+10, cnt_po+cnt_pi});
+			printf("c %d - pi : %f,%f\n", j, fx, fy);
+			l.push_back({fx, fy, findchip, cnt_po+cnt_pi});
 ok:
 			continue;
 		}
@@ -911,7 +905,7 @@ void draw(design* ds, position* pos, u8* pix){
 		ix = 1024*fx;
 		iy = 1024*fy;
 		sz = 1024/ce/4;
-		drawline_rect(pix, 0xff0000, ix-sz, iy-sz, ix+sz, iy+sz);
+		drawline_rect(pix, 0x888888, ix-sz, iy-sz, ix+sz, iy+sz);
 	}
 
 	std::vector<u32> colortable = buildcolortable(cnt_po+cnt_pi, 1);
@@ -919,11 +913,25 @@ void draw(design* ds, position* pos, u8* pix){
 	int oy;
 	for(int j=0;j<cnt_logic;j++){
 		for(int k=0;k<pos->wire[j].size();k++){
-			ix = pos->wire[j][k].sx;
-			iy = pos->wire[j][k].sy;
-			ox = pos->wire[j][k].dx;
-			oy = pos->wire[j][k].dy;
-			//printf("%d,%d: %d,%d - %d,%d\n", j, k, ix, iy, ox, oy);
+			int chipid = pos->wire[j][k].chipid;
+			ix = 1024*pos->_chip[chipid].x + pos->wire[j][k].sx;
+			iy = 1024*pos->_chip[chipid].y + pos->wire[j][k].sy;
+			//
+			int pinid = pos->wire[j][k].pinid;
+			if(pinid < cnt_po){		//in pinout
+				ox = 1024*pos->_out[pinid].x;
+				oy = 1024*pos->_out[pinid].y;
+			}
+			else if(pinid < cnt_po+cnt_pi){		//in pinin
+				ox = 1024*pos->_in[pinid-cnt_po].x;
+				oy = 1024*pos->_in[pinid-cnt_po].y;
+			}
+			else{		//maybe power pin
+				ox = ix;
+				oy = iy-10;
+			}
+			//
+			printf("%d,%d : %d,%d : %d,%d - %d,%d\n", j, k, chipid, pinid, ix, iy, ox, oy);
 			drawline(pix, colortable[pos->wire[j][k].pinid], ix,iy, ox,oy);
 		}
 	}
