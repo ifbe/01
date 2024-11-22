@@ -628,7 +628,7 @@ class position{
 public:
 	std::vector<pos> _out;
 	std::vector<pos> _in;
-	std::vector<std::vector<line>> pinviewwire;
+	std::vector<std::vector<line>> pinviewwire;		//[pin][conn][cid,fid,pid]
 	//
 	std::vector<pos> _chip;
 	std::vector<std::vector<pos>> _chipfoot;
@@ -645,16 +645,16 @@ void layout(design* ds, position* pos){
 
 	//pinout at top
 	for(int j=0;j<cnt_po;j++){
-		fx = (float)(j+1)/(cnt_po+1);
+		fx = 1024*(float)(j+1)/(cnt_po+1);
 		fy = 0.0;
-		pos->_out.push_back({fx, 0, 0});
+		pos->_out.push_back({fx, fy, 0});
 		printf("out %d: %f,%f\n", j, fx, fy);
 	}
 
 	//pinin at bot
 	for(int j=0;j<cnt_pi;j++){
-		fx = (float)(j+1)/(cnt_pi+1);
-		fy = 0.999;
+		fx = 1024*(float)(j+1)/(cnt_pi+1);
+		fy = 1024*0.999;
 		pos->_in.push_back({fx, fy, 0});
 		printf("out %d: %f,%f\n", j, fx, fy);
 	}
@@ -666,8 +666,8 @@ void layout(design* ds, position* pos){
 	printf("sqrt=%f,ceil=%d\n", sq, ce);
 
 	for(int j=0;j<cnt_chip;j++){
-		fx = (float)((j%ce)+1)/(ce+1);
-		fy = (float)((j/ce)+1)/(ce+1);
+		fx = 1024*(float)((j%ce)+1)/(ce+1);
+		fy = 1024*(float)((j/ce)+1)/(ce+1);
 		printf("chip %d: %f,%f\n", j, fx, fy);
 		pos->_chip.push_back({fx, fy, 0});
 	}
@@ -885,8 +885,8 @@ void drawchip(design* ds, position* pos, u8* pix){
 
 	int ix,iy,sz;
 	for(int j=0;j<cnt_chip;j++){
-		ix = 1024*pos->_chip[j].x;
-		iy = 1024*pos->_chip[j].y;
+		ix = pos->_chip[j].x;
+		iy = pos->_chip[j].y;
 		sz = 1024/ce/4;
 		drawline_rect(pix, 0x888888, ix-sz, iy-sz, ix+sz, iy+sz);
 	}
@@ -896,8 +896,8 @@ void drawfoot(design* ds, position* pos, u8* pix){
 	int ix,iy;
 	for(int j=0;j<cnt_chip;j++){
 		for(int k=0;k<pos->_chipfoot[j].size();k++){
-			ix = 1024*pos->_chip[j].x + pos->_chipfoot[j][k].x;
-			iy = 1024*pos->_chip[j].y + pos->_chipfoot[j][k].y;
+			ix = pos->_chip[j].x + pos->_chipfoot[j][k].x;
+			iy = pos->_chip[j].y + pos->_chipfoot[j][k].y;
 			drawline_rect(pix, 0x888888, ix-3, iy-3, ix+3, iy+3);
 		}
 	}
@@ -907,8 +907,8 @@ void drawpinout(design* ds, position* pos, u8* pix){
 	int ix,iy;
 	for(int j=0;j<cnt_po;j++){
 		for(int k=0;k<pos->_out.size();k++){
-			ix = 1024*pos->_out[j].x;
-			iy = 1024*pos->_out[j].y;
+			ix = pos->_out[j].x;
+			iy = pos->_out[j].y;
 			drawline_rect(pix, 0x888888, ix-3, iy-3, ix+3, iy+3);
 		}
 	}
@@ -924,17 +924,17 @@ void drawwire_chipview(design* ds, position* pos, u8* pix){
 		for(int k=0;k<pos->chipviewwire[j].size();k++){
 			int chipid = pos->chipviewwire[j][k].chipid;
 			int footid = pos->chipviewwire[j][k].footid;
-			ix = 1024*pos->_chip[chipid].x + pos->_chipfoot[chipid][footid].x;
-			iy = 1024*pos->_chip[chipid].y + pos->_chipfoot[chipid][footid].y;
+			ix = pos->_chip[chipid].x + pos->_chipfoot[chipid][footid].x;
+			iy = pos->_chip[chipid].y + pos->_chipfoot[chipid][footid].y;
 			//
 			int pinid = pos->chipviewwire[j][k].pinid;
 			if(pinid < cnt_po){		//in pinout
-				ox = 1024*pos->_out[pinid].x;
-				oy = 1024*pos->_out[pinid].y;
+				ox = pos->_out[pinid].x;
+				oy = pos->_out[pinid].y;
 			}
 			else if(pinid < cnt_po+cnt_pi){		//in pinin
-				ox = 1024*pos->_in[pinid-cnt_po].x;
-				oy = 1024*pos->_in[pinid-cnt_po].y;
+				ox = pos->_in[pinid-cnt_po].x;
+				oy = pos->_in[pinid-cnt_po].y;
 			}
 			else{		//maybe power pin
 				ox = ix;
@@ -956,12 +956,12 @@ void drawwire_pinview(design* ds, position* pos, u8* pix){
 	for(int j=0;j<pos->pinviewwire.size()-1;j++){
 		int pinid = j;
 		if(pinid < cnt_po){		//in pinout
-			ox = 1024*pos->_out[pinid].x;
-			oy = 1024*pos->_out[pinid].y;
+			ox = pos->_out[pinid].x;
+			oy = pos->_out[pinid].y;
 		}
 		else if(pinid < cnt_po+cnt_pi){		//in pinin
-			ox = 1024*pos->_in[pinid-cnt_po].x;
-			oy = 1024*pos->_in[pinid-cnt_po].y;
+			ox = pos->_in[pinid-cnt_po].x;
+			oy = pos->_in[pinid-cnt_po].y;
 		}
 		else{		//maybe power pin
 			ox = ix;
@@ -970,8 +970,8 @@ void drawwire_pinview(design* ds, position* pos, u8* pix){
 		for(int k=0;k<pos->pinviewwire[j].size();k++){
 			int chipid = pos->pinviewwire[j][k].chipid;
 			int footid = pos->pinviewwire[j][k].footid;
-			ix = 1024*pos->_chip[chipid].x + pos->_chipfoot[chipid][footid].x;
-			iy = 1024*pos->_chip[chipid].y + pos->_chipfoot[chipid][footid].y;//
+			ix = pos->_chip[chipid].x + pos->_chipfoot[chipid][footid].x;
+			iy = pos->_chip[chipid].y + pos->_chipfoot[chipid][footid].y;//
 			printf("%d,%d : chip%d.foot%d-pin%d : %d,%d - %d,%d\n", j,k, chipid,footid,pinid, ix, iy, ox, oy);
 			if( (pinid<cnt_po) | (k>0) ){
 			drawline(pix, colortable[pinid], ix,iy, ox,oy);
