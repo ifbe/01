@@ -878,58 +878,48 @@ void drawline_rect(u8* pix, u32 rgb, int x1, int y1, int x2, int y2)
 		}
 	}
 }
-void writeppm(unsigned char* buf, int pitch, int w, int h)
-{
-	printf("buf=%p,pitch=0x%x,w=%d,h=%d\n", buf, pitch, w, h);
-	FILE* fp = fopen("out.ppm", "wb");
-
-	char tmp[0x100];
-	int ret = snprintf(tmp, 0x100, "P6\n%d\n%d\n255\n", w, h);
-	fwrite(tmp, 1, ret, fp);
-
-	int x,y;
-	unsigned char* row;
-	for(y = 0; y < h; y++) {
-		row = buf + pitch*y;
-		for(x = 0; x < w; x++) {
-			fwrite(row+2, 1, 1, fp);
-			fwrite(row+1, 1, 1, fp);
-			fwrite(row+0, 1, 1, fp);
-			row += 4;
-		}
-	}
-
-	fclose(fp);
-}
-void draw(design* ds, position* pos, u8* pix){
-	int cnt_po = ds->_pinout.size();
-	int cnt_pi = ds->_pinin.size();
+void drawchip(design* ds, position* pos, u8* pix){
 	int cnt_chip = ds->_chip.size();
-	int cnt_logic = ds->_logic.size();
-	printf("draw: %d,%d,%d,%d\n", cnt_po, cnt_pi, cnt_chip, cnt_logic);
-
-	drawcolor(pix, 0);
-
 	float sq = sqrt(cnt_chip);
 	int ce = ceil(sq);
-	printf("sqrt=%f,ceil=%d\n", sq, ce);
 
-	float fx,fy;
 	int ix,iy,sz;
 	for(int j=0;j<cnt_chip;j++){
-		fx = pos->_chip[j].x;
-		fy = pos->_chip[j].y;
-		ix = 1024*fx;
-		iy = 1024*fy;
+		ix = 1024*pos->_chip[j].x;
+		iy = 1024*pos->_chip[j].y;
 		sz = 1024/ce/4;
 		drawline_rect(pix, 0x888888, ix-sz, iy-sz, ix+sz, iy+sz);
 	}
-
-	int ox;
-	int oy;
+}
+void drawfoot(design* ds, position* pos, u8* pix){
+	int cnt_chip = ds->_chip.size();
+	int ix,iy;
+	for(int j=0;j<cnt_chip;j++){
+		for(int k=0;k<pos->_chipfoot[j].size();k++){
+			ix = 1024*pos->_chip[j].x + pos->_chipfoot[j][k].x;
+			iy = 1024*pos->_chip[j].y + pos->_chipfoot[j][k].y;
+			drawline_rect(pix, 0x888888, ix-3, iy-3, ix+3, iy+3);
+		}
+	}
+}
+void drawpinout(design* ds, position* pos, u8* pix){
+	int cnt_po = ds->_pinout.size();
+	int ix,iy;
+	for(int j=0;j<cnt_po;j++){
+		for(int k=0;k<pos->_out.size();k++){
+			ix = 1024*pos->_out[j].x;
+			iy = 1024*pos->_out[j].y;
+			drawline_rect(pix, 0x888888, ix-3, iy-3, ix+3, iy+3);
+		}
+	}
+}
+void drawwire_chipview(design* ds, position* pos, u8* pix){
+	int cnt_po = ds->_pinout.size();
+	int cnt_pi = ds->_pinin.size();
 	std::vector<u32> colortable = buildcolortable(cnt_po+cnt_pi, 1);
 
-/*
+	int ix,iy;
+	int ox,oy;
 	for(int j=0;j<pos->chipviewwire.size();j++){
 		for(int k=0;k<pos->chipviewwire[j].size();k++){
 			int chipid = pos->chipviewwire[j][k].chipid;
@@ -955,7 +945,14 @@ void draw(design* ds, position* pos, u8* pix){
 			drawline(pix, colortable[pinid], ix,iy, ox,oy);
 		}
 	}
-*/
+}
+void drawwire_pinview(design* ds, position* pos, u8* pix){
+	int cnt_po = ds->_pinout.size();
+	int cnt_pi = ds->_pinin.size();
+	std::vector<u32> colortable = buildcolortable(cnt_po+cnt_pi, 1);
+
+	int ix,iy;
+	int ox,oy;
 	for(int j=0;j<pos->pinviewwire.size()-1;j++){
 		int pinid = j;
 		if(pinid < cnt_po){		//in pinout
@@ -983,8 +980,99 @@ void draw(design* ds, position* pos, u8* pix){
 			oy = iy;
 		}
 	}
+}
+void drawwire_astar(design* ds, position* pos, u8* pix){
+}
 
-	writeppm(pix, 1024*4, 1024, 1024);
+
+
+
+void writeppm(unsigned char* buf, int pitch, int w, int h, const char* name)
+{
+	printf("buf=%p,pitch=0x%x,w=%d,h=%d\n", buf, pitch, w, h);
+	FILE* fp = fopen(name, "wb");
+
+	char tmp[0x100];
+	int ret = snprintf(tmp, 0x100, "P6\n%d\n%d\n255\n", w, h);
+	fwrite(tmp, 1, ret, fp);
+
+	int x,y;
+	unsigned char* row;
+	for(y = 0; y < h; y++) {
+		row = buf + pitch*y;
+		for(x = 0; x < w; x++) {
+			fwrite(row+2, 1, 1, fp);
+			fwrite(row+1, 1, 1, fp);
+			fwrite(row+0, 1, 1, fp);
+			row += 4;
+		}
+	}
+
+	fclose(fp);
+}
+void draw_onlychip(design* ds, position* pos, u8* pix){
+	drawcolor(pix, 0);
+
+	drawchip(ds, pos, pix);
+
+	writeppm(pix, 1024*4, 1024, 1024, "onlychip.ppm");
+}
+void draw_onlyfoot(design* ds, position* pos, u8* pix){
+	drawcolor(pix, 0);
+
+	drawfoot(ds, pos, pix);
+
+	writeppm(pix, 1024*4, 1024, 1024, "onlyfoot.ppm");
+}
+void draw_onlypinout(design* ds, position* pos, u8* pix){
+	drawcolor(pix, 0);
+
+	drawpinout(ds, pos, pix);
+
+	writeppm(pix, 1024*4, 1024, 1024, "onlypinout.ppm");
+}
+void draw_chipview(design* ds, position* pos, u8* pix){
+	drawcolor(pix, 0);
+
+	drawchip(ds, pos, pix);
+	drawfoot(ds, pos, pix);
+	drawpinout(ds, pos, pix);
+
+	drawwire_chipview(ds, pos, pix);
+
+	writeppm(pix, 1024*4, 1024, 1024, "wire_chipview.ppm");
+}
+void draw_pinview(design* ds, position* pos, u8* pix){
+	drawcolor(pix, 0);
+
+	drawchip(ds, pos, pix);
+	drawfoot(ds, pos, pix);
+	drawpinout(ds, pos, pix);
+
+	drawwire_pinview(ds, pos, pix);
+
+	writeppm(pix, 1024*4, 1024, 1024, "wire_pinview.ppm");
+}
+void draw_astar(design* ds, position* pos, u8* pix){
+	drawcolor(pix, 0);
+
+	drawchip(ds, pos, pix);
+	drawfoot(ds, pos, pix);
+	drawpinout(ds, pos, pix);
+
+	drawwire_astar(ds, pos, pix);
+
+	writeppm(pix, 1024*4, 1024, 1024, "wire_astar.ppm");
+}
+void draw(design* ds, position* pos, u8* pix){
+/*
+	draw_onlychip(ds, pos, pix);
+	draw_onlyfoot(ds, pos, pix);
+	draw_onlypinout(ds, pos, pix);
+*/
+	draw_chipview(ds, pos, pix);
+	draw_pinview(ds, pos, pix);
+	draw_astar(ds, pos, pix);
 }
 
 
