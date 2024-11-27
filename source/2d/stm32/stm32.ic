@@ -1,0 +1,9 @@
+stm32f108c8t6{
+pinout{
+}
+}
+
+stm32f411ceu6{
+pinout{
+}
+}

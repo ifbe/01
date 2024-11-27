@@ -1,0 +1,313 @@
+40pin{
+pinout{
+   3v3, 5v
+ gpio2, 5v
+ gpio3, gnd
+ gpio4, gpio14
+   gnd, gpio15
+gpio17, gpio18
+gpio27, gnd
+gpio22, gpio23
+   3v3, gpio24
+gpio10, gnd
+ gpio9, gpio25
+gpio11, gpio8
+   gnd, gpio7
+ gpio0, gpio1
+ gpio5, gnd
+ gpio6, gpio12
+gpio13, gnd
+gpio19, gpio16
+gpio26, gpio20
+   gnd, gpio21
+}
+logic{
+//  name  , alt0     , alt1           , alt2     , alt3          , alt4       , alt5
+mux(gpio0 , i2c0_sda , smi_sa5        , dpi_clk  , aveout_vclk   , avein_vclk , -)
+mux(gpio1 , i2c0_scl , smi_sa4        , dpi_den  , aveout_dsync  , avein_dsync, -)
+mux(gpio2 , i2c1_sda , smi_sa3        , dpi_vsync, aveout_vsync  , avein_vsync, -)
+mux(gpio3 , i2c1_scl , smi_sa2        , dpi_hsync, aveout_hsync  , avein_hsync, -)
+mux(gpio4 , gpclk0   , smi_sa1        , dpi_d0   , aveout_vid0   , avein_vid0 , jtag_tdi)
+mux(gpio5 , gpclk1   , smi_sa0        , dpi_d1   , aveout_vid1   , avein_vid1 , jtag_tdo)
+mux(gpio6 , gpclk2   , smi_soe_n/se   , dpi_d2   , aveout_vid2   , avein_vid2 , jtag_rtck)
+mux(gpio7 , spi0_ce1 , smi_swe_n/srw_n, dpi_d3   , aveout_vid3   , avein_vid3 , -)
+mux(gpio8 , spi0_ce0 , smi_sd0        , dpi_d4   , aveout_vid4   , avein_vid4 , -)
+mux(gpio9 , spi0_miso, smi_sd1        , dpi_d5   , aveout_vid5   , avein_vid5 , -)
+mux(gpio10, spi0_mosi, smi_sd2        , dpi_d6   , aveout_vid6   , avein_vid6 , -)
+mux(gpio11, spi0_sclk, smi_sd3        , dpi_d7   , aveout_vid7   , avein_vid7 , -)
+mux(gpio12, pwm0     , smi_sd4        , dpi_d8   , aveout_vid8   , avein_vid8 , -)
+mux(gpio13, pwm1     , smi_sd5        , dpi_d9   , aveout_vid9   , avein_vid9 , jtag_tck)
+mux(gpio14, uart0_txd, smi_sd6        , dsi_d10  , aveout_vid10  , avein_vid10, uart1_txd)
+mux(gpio15, uart0_rxd, smi_sd7        , dsi_d11  , aveout_vid11  , avein_vid11, uart1_rxd)
+mux(gpio16, fl0      , smi_sd8        , dpi_d12  , uart0_cts     , spi1_ce2   , uart1_cts)
+mux(gpio17, fl1      , smi_sd9        , dpi_d13  , uart0_rts     , spi1_ce1   , uart1_rts)
+mux(gpio18, pcm_clk  , smi_sd10       , dpi_d14  , i2csl_sda/mosi, spi1_ce0   , pwm0)
+mux(gpio19, pcm_fs   , smi_sd11       , dpi_d15  , i2csl_scl/sclk, spi1_miso  , pwm1)
+mux(gpio20, pcm_din  , smi_sd12       , dpi_d16  , i2csl_miso    , spi1_mosi  , gpclk0)
+mux(gpio21, pcm_dout , smi_sd13       , dpi_d17  , i2csl_ce      , spi1_sclk  , gpclk1)
+mux(gpio22, sd0_clk  , smi_sd14       , dpi_d18  , sd1_clk       , jtag_trst  , -)
+mux(gpio23, sd0_cmd  , smi_sd15       , dpi_d19  , sd1_cmd       , jtag_rtck  , -)
+mux(gpio24, sd0_dat0 , smi_sd16       , dpi_d20  , sd1_dat0      , jtag_tdo   , -)
+mux(gpio25, sd0_dat1 , smi_sd17       , dpi_d21  , sd1_dat1      , jtag_tck   , -)
+mux(gpio26, sd0_dat2 , te0            , dpi_d22  , sd1_dat2      , jtag_tdi   , -)
+mux(gpio27, sd0_dat3 , te1            , dpi_d23  , sd1_dat3      , jtag_tms   , -)
+}
+}
+
+cm4{
+pinout{
+ 1_gnd           ,  2_gnd
+ 3_trd3_p        ,  4_trd1_p
+ 5_trd3_n        ,  6_trd1_n
+ 7_gnd           ,  8_gnd
+ 9_trd2_n        , 10_trd0_n
+11_trd2_p        , 12_trd0_p
+13_gnd           , 14_gnd
+15_eth_ledy      , 16_sync_in
+17_eth_ledg      , 18_sync_out
+19_x             , 20_eeprom_nwp
+21_?             , 22_gnd
+23_gnd           , 24_gpio26
+25_gpio21        , 26_gpio19
+27_gpio20        , 28_gpio13
+29_gpio16        , 30_gpio6
+31_gpio12        , 32_gnd
+33_gnd           , 34_gpio5
+35_id_sc         , 36_id_sd
+37_gpio7         , 38_gpio11
+39_gpio8         , 40_gpio9
+41_gpio25        , 42_gnd
+43_gnd           , 44_gpio10
+45_gpio24        , 46_gpio22
+47_gpio23        , 48_gpio27
+49_gpio18        , 50_gpio17
+51_gpio15        , 52_gnd
+53_gnd           , 54_gpio4
+55_gpio14        , 56_gpio3
+57_sd_clk        , 58_gpio2
+59_gnd           , 60_gnd
+61_sd_dat3       , 62_sd_cmd
+63_sd_dat0       , 64_x
+65_gnd           , 66_gnd
+67_sd_dat1       , 68_x
+69_sd_dat2       , 70_x
+71_gnd           , 72_x
+73_x             , 74_gnd
+75_sd_pwr_on     , 76_reserved
+77_5v            , 78_gpio_vref
+79_5v            , 80_scl0
+81_5v            , 82_sda0
+83_5v            , 84_3v3
+85_5v            , 86_3v3
+87_5v            , 88_1v8
+89_wl_ndis       , 90_1v8
+91_bt_ndis       , 92_run_pg
+93_nrpiboot      , 94_ain1
+95_npwr_led      , 96_ain0
+97_cam_gpio      , 98_gnd
+99_global_en     , 100_nextrst
+101_usbotg_id    , 102_pcie_clk_nreq
+103_usb2_n       , 104_x
+105_usb2_p       , 106_x
+107_gnd          , 108_gnd
+109_pcie_nrst    , 110_pcie_clk_p
+111_tv_out       , 112_pcie_clk_n
+113_gnd          , 114_gnd
+115_cam1_d0_n    , 116_pcie_rx_p
+117_cam1_d0_p    , 118_pcie_rx_n
+119_gnd          , 120_gnd
+121_cam1_d1_n    , 122_pcie_tx_p
+123_cam1_d1_p    , 124_pcie_tx_n
+125_gnd          , 126_gnd
+127_cam1_c_n     , 128_cam0_d0_n
+129_cam1_c_p     , 130_cam0_d0_p
+131_gnd          , 132_gnd
+133_cam1_d2_n    , 134_cam0_d1_n
+135_cam1_d2_p    , 136_cam0_d1_p
+137_gnd          , 138_gnd
+139_cam1_d3_n    , 140_cam0_c_n
+141_cam1_d3_p    , 142_cam0_c_p
+143_hdmi1_hotplug, 144_gnd
+145_hdmi1_sda    , 146_hdmi1_d2_p
+147_hdmi1_scl    , 148_hdmi1_d2_n
+149_hdmi1_cec    , 150_gnd
+151_hdmi0_cec    , 152_hdmi1_d1_p
+153_hdmi0_hotplug, 154_hdmi1_d1_n
+155_gnd          , 156_gnd
+157_dsi0_d0_n    , 158_hdmi1_d0_p
+159_dsi0_d0_p    , 160_hdmi1_d0_n
+161_gnd          , 126_gnd
+163_dsi0_d1_n    , 164_hdmi1_ck_p
+165_dsi0_d1_p    , 166_hdmi1_ck_n
+167_gnd          , 168_gnd
+169_dsi0_c_n     , 170_hdmi0_d2_p
+171_dsi0_c_p     , 172_hdmi0_d2_n
+173_gnd          , 174_gnd
+175_dsi1_d0_n    , 176_hdmi0_d1_p
+177_dsi1_d0_p    , 178_hdmi0_d1_n
+179_gnd          , 180_gnd
+181_dsi1_d1_n    , 182_hdmi0_d0_p
+183_dsi1_d1_p    , 184_hdmi0_d0_n
+185_gnd          , 186_gnd
+187_dsi1_c_n     , 188_hdmi0_ck_p
+189_dsi1_c_p     , 190_hdmi0_ck_n
+191_gnd          , 192_gnd
+193_dsi1_d2_n    , 194_dsi1_d3_n
+195_dsi1_d2_p    , 196_dsi1_d3_p
+197_gnd          , 198_gnd
+199_hdmi0_sda    , 200_hdmi0_scl
+}
+}
+
+cm4{
+pinout{
+ 1_gnd           ,  2_gnd
+ 3_trd3_p        ,  4_trd1_p
+ 5_trd3_n        ,  6_trd1_n
+ 7_gnd           ,  8_gnd
+ 9_trd2_n        , 10_trd0_n
+11_trd2_p        , 12_trd0_p
+13_gnd           , 14_gnd
+15_eth_ledy      , 16_tacho
+17_eth_ledg      , 18_sync_out
+19_pwm           , 20_eeprom_nwp
+21_?             , 22_gnd
+23_gnd           , 24_gpio26
+25_gpio21        , 26_gpio19
+27_gpio20        , 28_gpio13
+29_gpio16        , 30_gpio6
+31_gpio12        , 32_gnd
+33_gnd           , 34_gpio5
+35_id_sc         , 36_id_sd
+37_gpio7         , 38_gpio11
+39_gpio8         , 40_gpio9
+41_gpio25        , 42_gnd
+43_gnd           , 44_gpio10
+45_gpio24        , 46_gpio22
+47_gpio23        , 48_gpio27
+49_gpio18        , 50_gpio17
+51_gpio15        , 52_gnd
+53_gnd           , 54_gpio4
+55_gpio14        , 56_gpio3
+57_sd_clk        , 58_gpio2
+59_gnd           , 60_gnd
+61_sd_dat3       , 62_sd_cmd
+63_sd_dat0       , 64_x
+65_gnd           , 66_gnd
+67_sd_dat1       , 68_x
+69_sd_dat2       , 70_x
+71_gnd           , 72_x
+73_x             , 74_gnd
+75_sd_pwr_on     , 76_vbat
+77_5v            , 78_gpio_vref
+79_5v            , 80_scl0
+81_5v            , 82_sda0
+83_5v            , 84_3v3
+85_5v            , 86_3v3
+87_5v            , 88_1v8
+89_wl_ndis       , 90_1v8
+91_bt_ndis       , 92_pwr_but
+93_nrpiboot      , 94_cc1
+95_npwr_led      , 96_cc2
+97_cam_gpio0     , 98_gnd
+99_pmic_enable   , 100_cam_gpio1
+101_usbotg       , 102_pcie_clk_nreq
+103_usb2_n       , 104_pcie_nwake
+105_usb2_p       , 106_pcie_pwr_en
+107_gnd          , 108_gnd
+109_pcie_nrst    , 110_pcie_clk_p
+111_vbus_en      , 112_pcie_clk_n
+113_gnd          , 114_gnd
+115_dphy0_d0_n   , 116_pcie_rx_p
+117_dphy0_d0_p   , 118_pcie_rx_n
+119_gnd          , 120_gnd
+121_dphy0_d1_n   , 122_pcie_tx_p
+123_dphy0_d1_p   , 124_pcie_tx_n
+125_gnd          , 126_gnd
+127_dphy0_c_n    , 128_usb3-0-rx_n
+129_dphy0_c_p    , 130_usb3-0-rx_p
+131_gnd          , 132_gnd
+133_dphy0_d2_n   , 134_usb3-0-d_p
+135_dphy0_d2_p   , 136_usb3-0-d_n
+137_gnd          , 138_gnd
+139_dphy0_d3_n   , 140_usb3-0-tx_n
+141_dphy0_d3_p   , 142_usb3-0-tx_p
+143_hdmi1_hotplug, 144_gnd
+145_hdmi1_sda    , 146_hdmi1_d2_p
+147_hdmi1_scl    , 148_hdmi1_d2_n
+149_hdmi1_cec    , 150_gnd
+151_hdmi0_cec    , 152_hdmi1_d1_p
+153_hdmi0_hotplug, 154_hdmi1_d1_n
+155_gnd          , 156_gnd
+157_usb3-1-rx_n  , 158_hdmi1_d0_p
+159_usb3-1-rx_p  , 160_hdmi1_d0_n
+161_gnd          , 126_gnd
+163_usb3-1-d_p   , 164_hdmi1_ck_p
+165_usb3-1-d_n   , 166_hdmi1_ck_n
+167_gnd          , 168_gnd
+169_usb3-1-tx_n  , 170_hdmi0_d2_p
+171_usb3-1-tx_p  , 172_hdmi0_d2_n
+173_gnd          , 174_gnd
+175_dphy1_d0_n   , 176_hdmi0_d1_p
+177_dphy1_d0_p   , 178_hdmi0_d1_n
+179_gnd          , 180_gnd
+181_dphy1_d1_n   , 182_hdmi0_d0_p
+183_dphy1_d1_p   , 184_hdmi0_d0_n
+185_gnd          , 186_gnd
+187_dphy1_c_n    , 188_hdmi0_ck_p
+189_dphy1_c_p    , 190_hdmi0_ck_n
+191_gnd          , 192_gnd
+193_dphy1_d2_n   , 194_dphy1_d3_n
+195_dphy1_d2_p   , 196_dphy1_d3_p
+197_gnd          , 198_gnd
+199_hdmi0_sda    , 200_hdmi0_scl
+}
+}
+    
+rpi3{
+pinout{
+pwr : microusb
+hdmi0 : hdmi
+audio : 3.5mm
+csi : 15pin 2lane
+gpio : 40pin
+}
+}
+
+rpi4{
+pinout{
+usbc : typec
+hdmi0 : microhdmi
+hdmi1 : microhdmi
+audio : 3.5mm
+csi : 15pin 2lane
+dsi
+sdcard : tf
+poe : poe
+gpio : 40pin
+usb3_0 : usba 3.0
+usb3_1 : usba 3.0
+usb2_0 : usba 2.0
+usb2_1 : usba 2.0
+}
+}
+
+rpi5{
+pinout{
+usbc : typec
+rtc : rtc 2pin
+hdmi0 : microhdmi
+debug : uart 3pin
+hdmi1 : microhdmi
+mipi0 : 22pin 4lane
+mipi1 : 22pin 4lane
+sdcard : tf
+poe : poe
+fan : fanpwr
+gpio : 40pin
+usb3_0 : usba 3.0
+usb3_1 : usba 3.0
+usb2_0 : usba 2.0
+usb2_1 : usba 2.0
+}
+}

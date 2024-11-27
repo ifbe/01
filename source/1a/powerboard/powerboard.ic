@@ -1,0 +1,77 @@
+battery_2s{
+pinout{
+	gnd
+	v1
+	v2
+}
+}
+battery_3s{
+pinout{
+	gnd
+	v1
+	v2
+	v3
+}
+}
+
+xh254_3s{
+pinout{
+	gnd
+	v1
+	v2
+	v3
+}
+}
+
+voltdiv{
+param{
+	Rup
+	Rdn
+}
+pinout{
+	vin
+	vout
+	gnd
+}
+chip{
+	r_hi : resistor<Rup>
+	r_lo : resistor<Rdn>
+}
+}
+
+
+powerboard{
+pinout{
+	chg_gnd
+	chg_v1
+	chg_v2
+	//
+	out5v
+	tmp_v2
+}
+pinin{
+	tmp_v1
+	sense_v1
+	sense_v2
+}
+chip{
+	charger : xh254_2s
+	battery : battery_2s
+	switch : switch_2
+	convert : bulk
+	voltmeter : ads1115
+	vdiv_1 : voltdiv<10kohm, 10kohm>
+	vdiv_2 : voltdiv<20kohm, 10kohm>
+}
+logic{
+	battery(chg_gnd, chg_v1, chg_v2)
+	charger(chg_gnd, chg_v1, chg_v2)
+	switch(chg_v1, chg_v2, tmp_v1, tmp_v2)
+	//
+	convert(chg_gnd, tmp_v2, out5v)
+	//
+	vdiv_1(tmp_v1, sense_v1, gnd)
+	vdiv_2(tmp_v2, sense_v2, gnd)
+	voltmeter(sense_v1, sense_v2)
+}
+}
