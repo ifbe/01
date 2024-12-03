@@ -615,7 +615,7 @@ design* expand(session* sess, std::string name){
 
 
 
-struct pos{
+struct posxyz{
 	float x,y,z;
 };
 struct line{
@@ -626,12 +626,12 @@ struct line{
 };
 class position{
 public:
-	std::vector<pos> _out;
-	std::vector<pos> _in;
+	std::vector<posxyz> _out;
+	std::vector<posxyz> _in;
 	std::vector<std::vector<line>> pinviewwire;		//[pin][conn][cid,fid,pid]
 	//
-	std::vector<pos> _chip;
-	std::vector<std::vector<pos>> _chipfoot;
+	std::vector<posxyz> _chip;
+	std::vector<std::vector<posxyz>> _chipfoot;
 	std::vector<std::vector<line>> chipviewwire;		//[chip][foot][cid,fid,pid]
 };
 void layout(design* ds, position* pos){
@@ -981,7 +981,48 @@ void drawwire_pinview(design* ds, position* pos, u8* pix){
 		}
 	}
 }
+void drawwire_astar_one(u8* pix, std::vector<posxyz> tpos)
+{
+	for(int k=0;k<tpos.size();k++){
+		printf("foot%d : %f,%f\n", k, tpos[k].x, tpos[k].y);
+	}
+}
 void drawwire_astar(design* ds, position* pos, u8* pix){
+	int cnt_po = ds->_pinout.size();
+	int cnt_pi = ds->_pinin.size();
+	std::vector<u32> colortable = buildcolortable(cnt_po+cnt_pi, 1);
+
+	int ix,iy;
+	int ox,oy;
+	for(int j=0;j<pos->pinviewwire.size()-1;j++){
+		int pinid = j;
+		if(pinid < cnt_po){		//in pinout
+			ox = pos->_out[pinid].x;
+			oy = pos->_out[pinid].y;
+		}
+		else if(pinid < cnt_po+cnt_pi){		//in pinin
+			ox = pos->_in[pinid-cnt_po].x;
+			oy = pos->_in[pinid-cnt_po].y;
+		}
+		else{		//maybe power pin
+			ox = ix;
+			oy = iy-10;
+		}
+
+		std::vector<posxyz> tpos;
+		for(int k=0;k<pos->pinviewwire[j].size();k++){
+			int chipid = pos->pinviewwire[j][k].chipid;
+			int footid = pos->pinviewwire[j][k].footid;
+			ix = pos->_chip[chipid].x + pos->_chipfoot[chipid][footid].x;
+			iy = pos->_chip[chipid].y + pos->_chipfoot[chipid][footid].y;
+			tpos.push_back({(float)ix,(float)iy,0});
+		}
+		printf("pin=%d\n", j);
+		drawwire_astar_one(pix, tpos);
+
+		//
+		if(j>=1)break;
+	}
 }
 
 
