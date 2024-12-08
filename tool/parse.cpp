@@ -878,6 +878,29 @@ void drawline_rect(u8* pix, u32 rgb, int x1, int y1, int x2, int y2)
 		}
 	}
 }
+void writeppm(unsigned char* buf, int pitch, int w, int h, const char* name)
+{
+	printf("buf=%p,pitch=0x%x,w=%d,h=%d\n", buf, pitch, w, h);
+	FILE* fp = fopen(name, "wb");
+
+	char tmp[0x100];
+	int ret = snprintf(tmp, 0x100, "P6\n%d\n%d\n255\n", w, h);
+	fwrite(tmp, 1, ret, fp);
+
+	int x,y;
+	unsigned char* row;
+	for(y = 0; y < h; y++) {
+		row = buf + pitch*y;
+		for(x = 0; x < w; x++) {
+			fwrite(row+2, 1, 1, fp);
+			fwrite(row+1, 1, 1, fp);
+			fwrite(row+0, 1, 1, fp);
+			row += 4;
+		}
+	}
+
+	fclose(fp);
+}
 void drawchip(design* ds, position* pos, u8* pix){
 	int cnt_chip = ds->_chip.size();
 	float sq = sqrt(cnt_chip);
@@ -981,11 +1004,183 @@ void drawwire_pinview(design* ds, position* pos, u8* pix){
 		}
 	}
 }
-void drawwire_astar_one(u8* pix, std::vector<posxyz> tpos)
+struct astar_data{
+	u16 x;
+	u16 y;
+	//
+	u16 parentx;
+	u16 parenty;
+	//
+	int cost_to_src;
+	int cost_to_dst;
+	//
+	int besttarget;
+};
+struct astar_target{
+	u16 x;
+	u16 y;
+};
+u32 astar_encode(u16 x, u16 y)
 {
+	return 0x80008000 | (y<<16) | x;
+}
+int astar_decode(u32* map, u16 x, u16 y, u16* parentx, u16* parenty)
+{
+	u32 val = map[y*1024+x];
+	if((val&0x80008000) != 0x80008000)return 0;
+
+	*parentx = val & 0x7fff;
+	*parenty =(val>>16) & 0x7fff;
+	return 1;
+}
+void astar_traceback(u32* pix, u32* map, u16 x, u16 y, u32 color)
+{
+	int ret;
+	u16 parentx,parenty;
+	for(;;){
+		//printf("%d,%d\n", x, y);
+		pix[(y*1024)+x] = color;
+
+		ret = astar_decode(map, x, y, &parentx, &parenty);
+		if(0 == ret)break;
+		if((x==parentx)&&(y==parenty))break;
+
+		x = parentx;
+		y = parenty;
+	}
+}
+int astar_check(
+	std::vector<astar_data>& openlist,
+	std::vector<astar_target>& target,
+	u32* pix,
+	u32* map,
+	u16 x, u16 y, u16 parentx, u16 parenty,
+	int cost, u32 color)
+{
+	if(x < 0)return 0;
+	if(x > 1023)return 0;
+	if(y < 0)return 0;
+	if(y > 1024)return 0;
+	if(map[y*1024+x])return 0;
+
+	map[y*1024+x] = astar_encode(parentx, parenty);
+	openlist.push_back( {x, y, parentx, parenty, cost, 0} );
+
+	for(auto it=target.begin();it!=target.end();){
+		//debug
+		//if(abs(x-it->x) + abs(y-it->y) < 5)printf("%d,%d ? %d,%d\n", x, y, it->x, it->y);
+
+		//
+		if((x==it->x)&&(y==it->y)){
+			printf("found it: %d,%d, %d,%d\n", x, y, parentx, parenty);
+			astar_traceback(pix, map, x, y, color);
+			it = target.erase(it);
+		}
+		else it++;
+	}
+	return 1;
+}
+void drawwire_astar_one(u32* pix, std::vector<posxyz> tpos, u32 color)
+{
+	u32* map = (u32*)malloc(1024*1024*4);
+	drawcolor((u8*)map, 0);
+
+	for(int j=0;j<1024*1024;j++){
+		if(pix[j])map[j] = 0xffffffff;
+	}
+
+	for(int y=1;y<1023;y++){
+		for(int x=1;x<1023;x++){
+			if(map[y*1024+x] != 0xffffffff)continue;
+
+			u32* p = &map[(y-1)*1024+x-1];
+			if(p[0] == 0)p[0] = 0xffffff00;
+			if(p[1] == 0)p[1] = 0xffffff00;
+			if(p[2] == 0)p[2] = 0xffffff00;
+
+			p = &map[y*1024+x-1];
+			if(p[0] == 0)p[0] = 0xffffff00;
+			//if(p[1] == 0)p[1] = 0xffffff00;
+			if(p[2] == 0)p[2] = 0xffffff00;
+
+			p = &map[(y+1)*1024+x-1];
+			if(p[0] == 0)p[0] = 0xffffff00;
+			if(p[1] == 0)p[1] = 0xffffff00;
+			if(p[2] == 0)p[2] = 0xffffff00;
+		}
+	}
+
+	std::vector<astar_data> openlist;
+	std::vector<astar_target> target;
 	for(int k=0;k<tpos.size();k++){
 		printf("foot%d : %f,%f\n", k, tpos[k].x, tpos[k].y);
+
+		u16 x = tpos[k].x;
+		u16 y = tpos[k].y;
+		for(int m=0;m<5;m++)map[(y-m)*1024+x] = 0;
+
+		if(0==k){
+			printf("openlist += %d,%d\n", x, y);
+			map[y*1024+x] = astar_encode(x, y);
+			openlist.push_back( {x, y, x, y, 0, 0} );
+		}
+		else{
+			printf("targetlist += %d,%d\n", x, y);
+			target.push_back( {x, y} );
+		}
 	}
+
+
+	for(int j=0;j<500000;j++){
+		if(openlist.size() == 0)break;
+		if(target.size() == 0)break;
+
+		int minidx = 0;
+		int minval = 99999999;
+		for(int p=0;p<openlist.size();p++){
+			openlist[p].cost_to_dst = abs(openlist[p].x - target[0].x) + abs(openlist[p].y - target[0].y);
+			openlist[p].besttarget = 0;
+			for(int q=1;q<target.size();q++){
+				int cost = abs(openlist[p].x - target[q].x) + abs(openlist[p].y - target[q].y);
+				if(openlist[p].cost_to_dst > cost){
+					//printf("update cost %d\n", cost);
+					openlist[p].cost_to_dst = cost;
+					openlist[p].besttarget = q;
+				}
+			}
+			//printf("round%d openlist%d: x=%d,y=%d,cost=%d+%d,besttarget=%d\n", j, p, openlist[p].x, openlist[p].y, openlist[p].cost_to_src, openlist[p].cost_to_dst, openlist[p].besttarget);
+			int sum = openlist[p].cost_to_src + openlist[p].cost_to_dst;
+			if(minval > sum){
+				minidx = p;
+				minval = sum;
+			}
+		}
+
+		int mx = openlist[minidx].x;
+		int my = openlist[minidx].y;
+		int cost = openlist[minidx].cost_to_src;
+		//printf("round%d: openlist.size=%zu,closelist.size=%zu,target.size=%zu,minidx=%d,minval=%d,x=%d,y=%d\n", j, openlist.size(), closelist.size(), target.size(), minidx, minval, mx, my);
+
+		//closelist.push_back(openlist[minidx]);
+		openlist.erase(openlist.begin()+minidx);
+
+		int size_old = openlist.size();
+		astar_check(openlist, target, pix, map, mx  , my-1, mx, my, cost+1, color);
+		astar_check(openlist, target, pix, map, mx  , my+1, mx, my, cost+1, color);
+		astar_check(openlist, target, pix, map, mx+1, my  , mx, my, cost+1, color);
+		astar_check(openlist, target, pix, map, mx-1, my  , mx, my, cost+1, color);
+		int size_new = openlist.size();
+		/*
+		if(size_old == size_new){
+			printf("round%d: size=%d\n", j, size_old);
+		}*/
+	}
+
+	char name[128];
+	snprintf(name, 128, "debug_%x.ppm", color);
+	//writeppm((u8*)map, 1024*4, 1024, 1024, name);
+
+	free(map);
 }
 void drawwire_astar(design* ds, position* pos, u8* pix){
 	int cnt_po = ds->_pinout.size();
@@ -996,9 +1191,11 @@ void drawwire_astar(design* ds, position* pos, u8* pix){
 	int ox,oy;
 	for(int j=0;j<pos->pinviewwire.size()-1;j++){
 		int pinid = j;
+		std::vector<posxyz> tpos;
 		if(pinid < cnt_po){		//in pinout
 			ox = pos->_out[pinid].x;
 			oy = pos->_out[pinid].y;
+			tpos.push_back({(float)ox,(float)oy,0});
 		}
 		else if(pinid < cnt_po+cnt_pi){		//in pinin
 			ox = pos->_in[pinid-cnt_po].x;
@@ -1009,7 +1206,6 @@ void drawwire_astar(design* ds, position* pos, u8* pix){
 			oy = iy-10;
 		}
 
-		std::vector<posxyz> tpos;
 		for(int k=0;k<pos->pinviewwire[j].size();k++){
 			int chipid = pos->pinviewwire[j][k].chipid;
 			int footid = pos->pinviewwire[j][k].footid;
@@ -1018,7 +1214,7 @@ void drawwire_astar(design* ds, position* pos, u8* pix){
 			tpos.push_back({(float)ix,(float)iy,0});
 		}
 		printf("pin=%d\n", j);
-		drawwire_astar_one(pix, tpos);
+		drawwire_astar_one((u32*)pix, tpos, colortable[pinid]);
 
 		//
 		if(j>=1)break;
@@ -1028,29 +1224,6 @@ void drawwire_astar(design* ds, position* pos, u8* pix){
 
 
 
-void writeppm(unsigned char* buf, int pitch, int w, int h, const char* name)
-{
-	printf("buf=%p,pitch=0x%x,w=%d,h=%d\n", buf, pitch, w, h);
-	FILE* fp = fopen(name, "wb");
-
-	char tmp[0x100];
-	int ret = snprintf(tmp, 0x100, "P6\n%d\n%d\n255\n", w, h);
-	fwrite(tmp, 1, ret, fp);
-
-	int x,y;
-	unsigned char* row;
-	for(y = 0; y < h; y++) {
-		row = buf + pitch*y;
-		for(x = 0; x < w; x++) {
-			fwrite(row+2, 1, 1, fp);
-			fwrite(row+1, 1, 1, fp);
-			fwrite(row+0, 1, 1, fp);
-			row += 4;
-		}
-	}
-
-	fclose(fp);
-}
 void draw_onlychip(design* ds, position* pos, u8* pix){
 	drawcolor(pix, 0);
 
@@ -1098,8 +1271,8 @@ void draw_astar(design* ds, position* pos, u8* pix){
 	drawcolor(pix, 0);
 
 	drawchip(ds, pos, pix);
-	drawfoot(ds, pos, pix);
-	drawpinout(ds, pos, pix);
+	//drawfoot(ds, pos, pix);
+	//drawpinout(ds, pos, pix);
 
 	drawwire_astar(ds, pos, pix);
 
