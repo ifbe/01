@@ -15,6 +15,8 @@ typedef unsigned int u64;
 #define CONFIG_PRINT_CONSTRUCT 1
 #define CONFIG_PRINT_DESTRUCT 0
 #define CONFIG_PRINT_HIDE_COMMENTED 0
+//
+#define CONFIG_DEBUG_PPM_ASTAR 1
 
 
 class pindef{
@@ -938,6 +940,10 @@ void drawpinout(design* ds, position* pos, u8* pix){
 		}
 	}
 }
+
+
+
+
 void drawwire_chipview(design* ds, position* pos, u8* pix){
 	int cnt_po = ds->_pinout.size();
 	int cnt_pi = ds->_pinin.size();
@@ -971,6 +977,10 @@ void drawwire_chipview(design* ds, position* pos, u8* pix){
 		}
 	}
 }
+
+
+
+
 void drawwire_pinview(design* ds, position* pos, u8* pix){
 	int cnt_po = ds->_pinout.size();
 	int cnt_pi = ds->_pinin.size();
@@ -1006,6 +1016,17 @@ void drawwire_pinview(design* ds, position* pos, u8* pix){
 		}
 	}
 }
+
+
+
+
+#define CONFIG_DILATE_PIXEL_WALL 16
+#define CONFIG_DILATE_PIXEL_WIRE 2
+#define MAP_VAL_EMPTY 0
+#define MAP_VAL_DILATE 0x000000ff
+#define MAP_VAL_DONTDILATE 0xffff00ff	//this can only change to MAP_VAL_WIRE
+#define MAP_VAL_WIRE 0xffffff00
+#define MAP_VAL_WALL 0xffffffff
 struct astar_data{
 	u16 x;
 	u16 y;
@@ -1022,28 +1043,29 @@ struct astar_target{
 	u16 x;
 	u16 y;
 };
-u32 astar_encode(u16 x, u16 y)
+u32 astar_parent_encode(u16 x, u16 y)
 {
 	return 0x80008000 | (y<<16) | x;
 }
-int astar_decode(u32* map, u16 x, u16 y, u16* parentx, u16* parenty)
+int astar_parent_decode(u32* history, u16 x, u16 y, u16* parentx, u16* parenty)
 {
-	u32 val = map[y*1024+x];
+	u32 val = history[y*1024+x];
 	if((val&0x80008000) != 0x80008000)return 0;
 
 	*parentx = val & 0x7fff;
 	*parenty =(val>>16) & 0x7fff;
 	return 1;
 }
-void astar_traceback(u32* pix, u32* map, u16 x, u16 y, u32 color)
+void astar_traceback(u32* pix, u32* map, u32* history, u16 x, u16 y, u32 color)
 {
 	int ret;
 	u16 parentx,parenty;
 	for(;;){
 		//printf("%d,%d\n", x, y);
 		pix[(y*1024)+x] = color;
+		map[(y*1024)+x] = MAP_VAL_WIRE;
 
-		ret = astar_decode(map, x, y, &parentx, &parenty);
+		ret = astar_parent_decode(history, x, y, &parentx, &parenty);
 		if(0 == ret)break;
 		if((x==parentx)&&(y==parenty))break;
 
@@ -1056,6 +1078,7 @@ int astar_check(
 	std::vector<astar_target>& target,
 	u32* pix,
 	u32* map,
+	u32* history,
 	u16 x, u16 y, u16 parentx, u16 parenty,
 	int cost, u32 color)
 {
@@ -1063,9 +1086,9 @@ int astar_check(
 	if(x > 1023)return 0;
 	if(y < 0)return 0;
 	if(y > 1023)return 0;
-	if(map[y*1024+x])return 0;
+	if(history[y*1024+x])return 0;
 
-	map[y*1024+x] = astar_encode(parentx, parenty);
+	history[y*1024+x] = astar_parent_encode(parentx, parenty);
 	openlist.push_back( {x, y, parentx, parenty, cost, 0} );
 
 	for(auto it=target.begin();it!=target.end();){
@@ -1075,7 +1098,7 @@ int astar_check(
 		//
 		if((x==it->x)&&(y==it->y)){
 			printf("found it: %d,%d, %d,%d\n", x, y, parentx, parenty);
-			astar_traceback(pix, map, x, y, color);
+			astar_traceback(pix, map, history, x, y, color);
 			printf("found it.mid\n");
 			it = target.erase(it);
 			printf("found it.end\n");
@@ -1084,8 +1107,17 @@ int astar_check(
 	}
 	return 1;
 }
-int drawwire_astar_one(u32* pix, u32* map, std::vector<posxyz> tpos, u32 color)
+int drawwire_astar_one(u32* pix, u32* map, u32* history, std::vector<posxyz> tpos, int pinid, u32 color)
 {
+	for(int y=0;y<1024;y++){
+	for(int x=0;x<1024;x++){
+		u32* p = &map[y*1024+x];
+		u32* q = &history[y*1024+x];
+		if( (0==*p) | (MAP_VAL_DONTDILATE==*p) ){*q = 0;}
+		else *q = 0xffffffff;
+	}
+	}
+
 	std::vector<astar_data> openlist;
 	std::vector<astar_target> target;
 	for(int k=0;k<tpos.size();k++){
@@ -1096,7 +1128,7 @@ int drawwire_astar_one(u32* pix, u32* map, std::vector<posxyz> tpos, u32 color)
 
 		if(0==k){
 			printf("openlist += %d,%d\n", x, y);
-			map[y*1024+x] = astar_encode(x, y);
+			history[y*1024+x] = astar_parent_encode(x, y);
 			openlist.push_back( {x, y, x, y, 0, 0} );
 		}
 		else{
@@ -1140,10 +1172,10 @@ int drawwire_astar_one(u32* pix, u32* map, std::vector<posxyz> tpos, u32 color)
 		openlist.erase(openlist.begin()+minidx);
 
 		int size_old = openlist.size();
-		astar_check(openlist, target, pix, map, mx  , my-1, mx, my, cost+1, color);
-		astar_check(openlist, target, pix, map, mx  , my+1, mx, my, cost+1, color);
-		astar_check(openlist, target, pix, map, mx+1, my  , mx, my, cost+1, color);
-		astar_check(openlist, target, pix, map, mx-1, my  , mx, my, cost+1, color);
+		astar_check(openlist, target, pix, map, history, mx  , my-1, mx, my, cost+1, color);
+		astar_check(openlist, target, pix, map, history, mx  , my+1, mx, my, cost+1, color);
+		astar_check(openlist, target, pix, map, history, mx+1, my  , mx, my, cost+1, color);
+		astar_check(openlist, target, pix, map, history, mx-1, my  , mx, my, cost+1, color);
 		int size_new = openlist.size();
 		/*
 		if(size_old == size_new){
@@ -1151,25 +1183,42 @@ int drawwire_astar_one(u32* pix, u32* map, std::vector<posxyz> tpos, u32 color)
 		}*/
 	}
 
+	for(int j=0;j<target.size();j++){
+		for(int y=0;y<8;y++){
+			if(target[j].y < y)break;
+			pix[(target[j].y - y) * 1024 + target[j].x] = color;
+		}
+	}
+#if CONFIG_DEBUG_PPM_ASTAR==1
 	char name[128];
-	snprintf(name, 128, "debug_%x.ppm", color);
+	snprintf(name, 128, "debug%x_color%06x_total%zu_remain%zu_pixel.ppm",
+		pinid, color, tpos.size()-1, target.size());
+	writeppm((u8*)pix, 1024*4, 1024, 1024, name);
+	snprintf(name, 128, "debug%x_color%06x_total%zu_remain%zu_map.ppm",
+		pinid, color, tpos.size()-1, target.size());
 	writeppm((u8*)map, 1024*4, 1024, 1024, name);
-
+	snprintf(name, 128, "debug%x_color%06x_total%zu_remain%zu_history.ppm",
+		pinid, color, tpos.size()-1, target.size());
+	writeppm((u8*)history, 1024*4, 1024, 1024, name);
+#endif
 	return target.size();
 }
-#define CONFIG_DILATE_PIXEL 8
-void drawwire_clear(u32* pix, u8* dontdilate, int x, int y)
+void drawwire_clearone(u32* pix, u32* map, int x, int y)
 {
-	for(int m=0;m<=CONFIG_DILATE_PIXEL;m++){
+	for(int m=0;m<=CONFIG_DILATE_PIXEL_WALL;m++){
 		if(y<m)break;
 		pix[(y-m)*1024+x] = 0;
-		dontdilate[(y-m)*1024+x] = (m==0) ? 0xff : m;
+		map[(y-m)*1024+x] = MAP_VAL_DONTDILATE;
 	}
 }
-void drawwire_clearpix(design* ds, position* pos, u8* pix, u8* dontdilate)
+void drawwire_clearpixandmap(design* ds, position* pos, u32* pix, u32* map)
 {
-	for(int j=0;j<1024*1024;j++)dontdilate[j] = 0;
+	//at begining, generate map from pixel
+	for(int j=0;j<1024*1024;j++){
+		map[j] = pix[j] ? MAP_VAL_WALL : MAP_VAL_EMPTY;
+	}
 
+	//set some area: clear and dont allow dilate
 	int ix,iy;
 	int ox,oy;
 	int cnt_po = ds->_pinout.size();
@@ -1179,7 +1228,7 @@ void drawwire_clearpix(design* ds, position* pos, u8* pix, u8* dontdilate)
 		if(pinid < cnt_po){		//in pinout
 			ox = pos->_out[pinid].x;
 			oy = pos->_out[pinid].y;
-			drawwire_clear((u32*)pix, dontdilate, ox, oy);
+			drawwire_clearone((u32*)pix, map, ox, oy);
 		}
 
 		for(int k=0;k<pos->pinviewwire[j].size();k++){
@@ -1187,43 +1236,57 @@ void drawwire_clearpix(design* ds, position* pos, u8* pix, u8* dontdilate)
 			int footid = pos->pinviewwire[j][k].footid;
 			ix = pos->_chip[chipid].x + pos->_chipfoot[chipid][footid].x;
 			iy = pos->_chip[chipid].y + pos->_chipfoot[chipid][footid].y;
-			drawwire_clear((u32*)pix, dontdilate, ix, iy);
+			drawwire_clearone((u32*)pix, map, ix, iy);
 		}
 	}
 }
-void drawwire_buildmap(u32* pix, u8* dontdilate, u32* map){
-	drawcolor((u8*)map, 0);
-
-	for(int j=0;j<1024*1024;j++){
-		if(pix[j])map[j] = 0xffffffff;
-	}
-
-	//dilate, but skip some area
-	for(int y=CONFIG_DILATE_PIXEL;y<1024-CONFIG_DILATE_PIXEL;y++){
-		for(int x=CONFIG_DILATE_PIXEL;x<1024-CONFIG_DILATE_PIXEL;x++){
-			if(map[y*1024+x] != 0xffffffff)continue;
-
-			for(int dy=-CONFIG_DILATE_PIXEL;dy<=CONFIG_DILATE_PIXEL;dy++){
-				for(int dx=-CONFIG_DILATE_PIXEL;dx<=CONFIG_DILATE_PIXEL;dx++){
-					u32* p = &map[(y+dy)*1024 + x+dx];
-					u8* t = &dontdilate[(y+dy)*1024 + x+dx];
-					if( (0==p[0]) && (0==t[0]) )p[0] = 0xffffff00;
-				}
-			}
+void drawwire_dilate(u32* map, int howmanyleft){
+	//clear previous dilate
+	for(int y=0;y<1024;y++){
+		for(int x=0;x<1024;x++){
+			if(map[y*1024+x] == MAP_VAL_DILATE)map[y*1024+x] = MAP_VAL_EMPTY;
 		}
 	}
+
+	//dilate wall and wire
+	int dilatewall = (2<<howmanyleft);	//1,2,4,8
+	int dilatewire = CONFIG_DILATE_PIXEL_WIRE;
+	printf("dilate:wall=%d,wire=%d\n", dilatewall, dilatewire);
+	if(dilatewall>16)dilatewall=16;
+	for(int y=dilatewall;y<1024-dilatewall;y++){
+	for(int x=dilatewall;x<1024-dilatewall;x++){
+		if(map[y*1024+x] == MAP_VAL_WALL){
+			for(int dy=-dilatewall;dy<=dilatewall;dy++){
+			for(int dx=-dilatewall;dx<=dilatewall;dx++){
+				u32* p = &map[(y+dy)*1024 + x+dx];
+				if(0==p[0])p[0] = MAP_VAL_DILATE;
+			}//dx
+			}//dy
+		}//if
+		else if(map[y*1024+x] == MAP_VAL_WIRE){
+			for(int dy=-dilatewire;dy<=dilatewire;dy++){
+			for(int dx=-dilatewire;dx<=dilatewire;dx++){
+				u32* p = &map[(y+dy)*1024 + x+dx];
+				if(0==p[0])p[0] = MAP_VAL_DILATE;
+			}//dx
+			}//dy
+		}//if
+	}//x
+	}//y
 }
-void drawwire_astar(design* ds, position* pos, u8* pix){
+void drawwire_astar(design* ds, position* pos, u32* pix){
 	int cnt_po = ds->_pinout.size();
 	int cnt_pi = ds->_pinin.size();
 	std::vector<u32> colortable = buildcolortable(cnt_po+cnt_pi, 1);
 
+	u32* map = (u32*)malloc(1024*1024*4);
+	drawwire_clearpixandmap(ds, pos, pix, map);
+
+	u32* parent = (u32*)malloc(1024*1024*4);
+	for(int y=0;y<1024;y++)for(int x=0;x<1024;x++)parent[y*1024+x] = 0;
+
 	int ix,iy;
 	int ox,oy;
-	u8* dontdilate = (u8*)malloc(1024*1024);
-	drawwire_clearpix(ds, pos, pix, dontdilate);
-
-	u32* map = (u32*)malloc(1024*1024*4);
 	for(int j=0;j<pos->pinviewwire.size()-1;j++){
 		int pinid = j;
 		std::vector<posxyz> tpos;
@@ -1239,6 +1302,7 @@ void drawwire_astar(design* ds, position* pos, u8* pix){
 		else{		//maybe power pin
 			ox = ix;
 			oy = iy-10;
+			break;
 		}
 
 		for(int k=0;k<pos->pinviewwire[j].size();k++){
@@ -1250,8 +1314,8 @@ void drawwire_astar(design* ds, position* pos, u8* pix){
 		}
 
 		printf("pin=%d,size=%zu{\n", j, tpos.size());
-		drawwire_buildmap((u32*)pix, dontdilate, (u32*)map);
-		int ret = drawwire_astar_one((u32*)pix, (u32*)map, tpos, colortable[pinid]);
+		drawwire_dilate((u32*)map, cnt_po+cnt_pi-j);
+		int ret = drawwire_astar_one((u32*)pix, (u32*)map, (u32*)parent, tpos, pinid, colortable[pinid]);
 		printf("}pin=%d,ret=%d\n", j, ret);
 		printf("\n\n");
 
@@ -1261,16 +1325,19 @@ void drawwire_astar(design* ds, position* pos, u8* pix){
 
 	free(map);
 }
-void drawwire_astar_lesspinfirst(design* ds, position* pos, u8* pix){
+void drawwire_astar_lesspinfirst(design* ds, position* pos, u32* pix){
 	int cnt_po = ds->_pinout.size();
 	int cnt_pi = ds->_pinin.size();
 	std::vector<u32> colortable = buildcolortable(cnt_po+cnt_pi, 1);
 
+	u32* map = (u32*)malloc(1024*1024*4);
+	drawwire_clearpixandmap(ds, pos, pix, map);
+
+	u32* history = (u32*)malloc(1024*1024*4);
+	for(int y=0;y<1024;y++)for(int x=0;x<1024;x++)history[y*1024+x] = 0;
+
 	int ix,iy;
 	int ox,oy;
-	u8* dontdilate = (u8*)malloc(1024*1024);
-	drawwire_clearpix(ds, pos, pix, dontdilate);
-
 	std::vector<std::vector<posxyz>> tpos;
 	for(int j=0;j<pos->pinviewwire.size()-1;j++){
 		int pinid = j;
@@ -1280,6 +1347,9 @@ void drawwire_astar_lesspinfirst(design* ds, position* pos, u8* pix){
 			oy = pos->_out[pinid].y;
 			one.push_back({(float)ox,(float)oy,0});
 		}
+		else if(pinid < cnt_po+cnt_pi){		//in pinin
+		}
+		else break;
 
 		for(int k=0;k<pos->pinviewwire[j].size();k++){
 			int chipid = pos->pinviewwire[j][k].chipid;
@@ -1292,16 +1362,15 @@ void drawwire_astar_lesspinfirst(design* ds, position* pos, u8* pix){
 		tpos.push_back(one);
 	}
 
-    std::sort(tpos.begin(), tpos.end(), [](const std::vector<posxyz>& a, const std::vector<posxyz>& b) {
-        return a.size() < b.size();
-    });
+	std::sort(tpos.begin(), tpos.end(), [](const std::vector<posxyz>& a, const std::vector<posxyz>& b) {
+		return a.size() < b.size();
+	});
 
-	u32* map = (u32*)malloc(1024*1024*4);
 	for(int j=0;j<tpos.size();j++){
 		int pinid = j;
 		printf("pin=%d,size=%zu{\n", j, tpos[j].size());
-		drawwire_buildmap((u32*)pix, dontdilate, (u32*)map);
-		int ret = drawwire_astar_one((u32*)pix, (u32*)map, tpos[j], colortable[pinid]);
+		drawwire_dilate((u32*)map, tpos.size()-j);
+		int ret = drawwire_astar_one((u32*)pix, (u32*)map, (u32*)history, tpos[j], pinid, colortable[pinid]);
 		printf("}pin=%d,ret=%d\n", j, ret);
 		printf("\n\n");
 	}
@@ -1362,8 +1431,8 @@ void draw_astar(design* ds, position* pos, u8* pix){
 	//drawfoot(ds, pos, pix);
 	//drawpinout(ds, pos, pix);
 
-	//drawwire_astar(ds, pos, pix);
-	drawwire_astar_lesspinfirst(ds, pos, pix);
+	//drawwire_astar(ds, pos, (u32*)pix);
+	drawwire_astar_lesspinfirst(ds, pos, (u32*)pix);
 
 	writeppm(pix, 1024*4, 1024, 1024, "wire_astar.ppm");
 }
