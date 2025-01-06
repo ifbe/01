@@ -68,6 +68,7 @@ void layout(design* ds, position* pos){
 		std::vector<pindef*> pi = ds->_pinin;
 		std::vector<chipfootpin> cfl;
 		for(int k=0;k<pinname.size();k++){
+			printf("->%d,%d,%s\n", j,k,pinname[k].c_str());
 			fx = -sz + (float)(k+1) * (sz*2) / (pinname.size()+1);		//must convert to float, or crash
 			fy = -sz + 1;
 			pos->_chipfoot[findchip].push_back({fx, fy, 0.0});
@@ -90,7 +91,7 @@ void layout(design* ds, position* pos){
 			}
 
 			//pinglobal found
-			for(m=0;m<pi.size();m++){
+			for(m=0;m<pinglobal.size();m++){
 				if(pinname[k] == pinglobal[m]){
 					printf("%d: chip%d.foot%d-pg%d\n", j, findchip, k, m);
 					cfl.push_back({findchip, k, cnt_po+cnt_pi+m});
@@ -119,7 +120,7 @@ ok:
 		fx = 0;
 		fy = 1024*(float)(j+1)/(cnt_pg+1);
 		pos->_pin_global.push_back({fx, fy, 0});
-		printf("out %d: %f,%f\n", j, fx, fy);
+		printf("pin_global %d: %f,%f\n", j, fx, fy);
 	}
 
 	printf("convert chipviewwire to pinviewwire\n");
@@ -128,11 +129,12 @@ ok:
 		for(int k=0;k<pos->chipviewwire[j].size();k++){
 			int pinid = pos->chipviewwire[j][k].pinid;
 			pos->pinviewwire[pinid].push_back(pos->chipviewwire[j][k]);
+			printf("chipview %d,%d: pin=%d\n", j, k, pinid);
 		}
 	}
 	for(int j=0;j<pos->pinviewwire.size();j++){
 		for(int k=0;k<pos->pinviewwire[j].size();k++){
-			printf("%d,%d: %d,%d\n", j, k, pos->pinviewwire[j][k].chipid, pos->pinviewwire[j][k].footid);
+			printf("pinview %d,%d: chip=%d,foot=%d\n", j, k, pos->pinviewwire[j][k].chipid, pos->pinviewwire[j][k].footid);
 		}
 	}
 }
