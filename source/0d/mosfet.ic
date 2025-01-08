@@ -1,0 +1,38 @@
+//if(s-g>threshold)o=s
+pmos{
+	pinout{
+		s
+		d
+		g
+	}
+}
+
+//if(g-b>threshold)w0=w1
+pmos_sdgb{
+	pinout{
+		s
+		d
+		g
+		b
+	}
+}
+
+
+//if(g-s>threshold)o=s
+nmos{
+	pinout{
+		d
+		s
+		g
+	}
+}
+
+//if(g-b>threshold)w0=w1
+nmos_dsgb{
+	pinout{
+		d
+		s
+		g
+		b
+	}
+}

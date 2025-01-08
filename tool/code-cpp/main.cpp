@@ -56,7 +56,7 @@ void parse(filecontext* ctx, u8* buf, int len);
 design* expand(session* sess, std::string name);
 //
 void layout(design* ds, position* pos);
-void draw(design* ds, position* pos, u8* pix);
+void draw(session* sess, design* ds, position* pos, u8* pix);
 
 
 
@@ -93,7 +93,7 @@ int main(int argc, char** argv)
 
 	position pos = position();
 	layout(it, &pos);
-	draw(it, &pos, buf);
+	draw(sess, it, &pos, buf);
 
 	delete it;
 	return 0;
