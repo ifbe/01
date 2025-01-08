@@ -379,12 +379,12 @@ void drawchip(design* ds, position* pos, u8* pix){
 	int cnt_chip = ds->_chip.size();
 	float sq = sqrt(cnt_chip);
 	int ce = ceil(sq);
+	int sz = 1024/(ce*2+1)/2;
 
-	int ix,iy,sz;
+	int ix,iy;
 	for(int j=0;j<cnt_chip;j++){
 		ix = pos->_chip[j].x;
 		iy = pos->_chip[j].y;
-		sz = 1024/ce/4;
 		drawline_rect(pix, 0x888888, ix-sz, iy-sz, ix+sz, iy+sz);
 		printf("ix=%d,iy=%d,name=%s\n", ix, iy, (u8*)ds->_chip[j]->cname.c_str());
 		drawstring_atpoint((u32*)pix, 0x888888, ix, iy, (u8*)ds->_chip[j]->cname.c_str(), 0);
@@ -527,10 +527,11 @@ void drawwire_pinview(position* pos, u8* pix){
 #define CONFIG_DILATE_CHIP_GAP 2
 #define CONFIG_DILATE_WIRE_GAP 2
 //
-#define MAP_VAL_EMPTY 0
-#define MAP_VAL_DILATE_WIRE 0x000000ff
-#define MAP_VAL_DILATE_CHIP 0x0000ff00
-#define MAP_VAL_DONTDILATE 0x0000ffff	//this can only change to MAP_VAL_WIRE
+#define MAP_EMPTY_FIRST 0
+#define MAP_EMPTY_FINAL (MAP_EMPTY_FIRST+0xffff)
+#define MAP_VAL_DONTDILATE 0xff40ffff	//this can only change to MAP_VAL_WIRE
+#define MAP_VAL_DILATE_WIRE 0xff4000ff
+#define MAP_VAL_DILATE_CHIP 0xff40ff00
 #define MAP_CHIP_FIRST 0xff800000
 #define MAP_CHIP_FINAL (MAP_CHIP_FIRST+0xffff)
 #define MAP_WIRE_FIRST 0xffc00000
@@ -539,12 +540,12 @@ void drawmap_chip(u32* map, position* pos){
 	int cnt_chip = pos->_chip.size();
 	float sq = sqrt(cnt_chip);
 	int ce = ceil(sq);
+	int sz = 1024/(ce*2+1)/2;
 
-	int ix,iy,sz;
+	int ix,iy;
 	for(int j=0;j<cnt_chip;j++){
 		ix = pos->_chip[j].x;
 		iy = pos->_chip[j].y;
-		sz = 1024/ce/4;
 		drawline_rect((u8*)map, MAP_CHIP_FIRST+j, ix-sz, iy-sz, ix+sz, iy+sz);
 	}
 }
@@ -642,8 +643,9 @@ void drawwire_dilate_chip(u32* map, int cnt, int ix, int iy)
 	int ey = (iy+cnt>1024) ? 1023 : (iy+cnt);
 	for(int y=sy;y<=ey;y++){
 	for(int x=sx;x<=ex;x++){
-		if(0 == map[y*1024+x]){
-			map[y*1024+x] = MAP_VAL_DILATE_CHIP;
+		int idx = y*1024+x;
+		if( (MAP_EMPTY_FIRST <= map[idx]) && (map[idx] <= MAP_EMPTY_FINAL) ){
+			map[idx] = MAP_VAL_DILATE_CHIP;
 		}
 	}
 	}
@@ -656,8 +658,9 @@ void drawwire_dilate_wire(u32* map, int cnt, int ix, int iy)
 	int ey = (iy+cnt>1024) ? 1023 : (iy+cnt);
 	for(int y=sy;y<=ey;y++){
 	for(int x=sx;x<=ex;x++){
-		if(0 == map[y*1024+x]){
-			map[y*1024+x] = MAP_VAL_DILATE_WIRE;
+		int idx = y*1024+x;
+		if( (MAP_EMPTY_FIRST <= map[idx]) && (map[idx] <= MAP_EMPTY_FINAL) ){
+			map[idx] = MAP_VAL_DILATE_WIRE;
 		}
 	}
 	}
@@ -667,7 +670,7 @@ void drawwire_dilate(u32* map, std::vector<int>& perchipinfo){
 	for(int y=0;y<1024;y++){
 		for(int x=0;x<1024;x++){
 			//printf("drawwire_dilate1: %d,%d:%x\n", x,y,map[y*1024+x]);
-			if(map[y*1024+x] == MAP_VAL_DILATE_CHIP)map[y*1024+x] = MAP_VAL_EMPTY;
+			if(map[y*1024+x] == MAP_VAL_DILATE_CHIP)map[y*1024+x] = MAP_EMPTY_FIRST;
 		}
 	}
 
@@ -688,6 +691,33 @@ void drawwire_dilate(u32* map, std::vector<int>& perchipinfo){
 		}//if
 	}//dx
 	}//dy
+}
+
+
+
+
+void drawwire_costmap(u32* map, position* pos){
+	int cnt_chip = pos->_chip.size();
+	float sq = sqrt(cnt_chip);
+	int ce = ceil(sq);
+	int inner = 1024/(ce*2+1)/2;
+	int outer = 1024/(ce*2+1);
+
+	int ix,iy;
+	for(int j=0;j<cnt_chip;j++){
+		ix = pos->_chip[j].x;
+		iy = pos->_chip[j].y;
+		for(int y=iy-outer;y<iy+outer;y++){
+		for(int x=ix-outer;x<ix+outer;x++){
+			int absx = abs(x-ix);
+			int absy = abs(y-iy);
+			if((absx<=inner)&&(absy<=inner))continue;
+			int max = std::max(absx, absy);
+			int idx = y*1024 + x;
+			if( (MAP_EMPTY_FIRST <= map[idx]) && (map[idx] <= MAP_EMPTY_FINAL) )map[idx] = MAP_EMPTY_FIRST + (outer-max);
+		}
+		}
+	}
 }
 
 
@@ -759,6 +789,17 @@ int astar_check(
 	if(y > 1023)return 0;
 	if(history[y*1024+x])return 0;
 
+	int idx = y*1024+x;
+	if( (MAP_EMPTY_FIRST <= map[idx]) && (map[idx] <= MAP_EMPTY_FINAL) ){
+		cost += map[idx]-MAP_EMPTY_FIRST;
+	}
+	else if(MAP_VAL_DONTDILATE == map[idx]){
+		//allow
+	}
+	else{
+		return 0;
+	}
+
 	//cond1: mark this pixel visited
 	history[y*1024+x] = astar_parent_encode(parentx, parenty);
 	openlist.push_back( {x, y, parentx, parenty, cost, 0} );
@@ -796,7 +837,8 @@ int drawwire_astar_one(
 	for(int x=0;x<1024;x++){
 		u32* p = &map[y*1024+x];
 		u32* q = &history[y*1024+x];
-		if( (0==*p) | (MAP_VAL_DONTDILATE==*p) ){*q = 0;}
+		if( (MAP_EMPTY_FIRST <= *p) && (*p <= MAP_EMPTY_FINAL) ){*q = 0;}
+		else if(MAP_VAL_DONTDILATE==*p){*q = 0;}
 		else *q = 0xffffffff;		//fake it in history, means cannot access this pixel
 	}
 	}
@@ -823,7 +865,7 @@ int drawwire_astar_one(
 	}
 
 
-	for(int j=0;j<500000;j++){
+	for(int j=0;j<1000*1000;j++){
 		if(openlist.size() == 0)break;
 		if(tarlist.size() == 0)break;
 
@@ -861,22 +903,22 @@ int drawwire_astar_one(
 			openlist, tarlist, perchip,
 			map, history,
 			mx  , my-1, mx, my,
-			cost+1, pinid);
+			cost+10, pinid);
 		astar_check(
 			openlist, tarlist, perchip,
 			map, history,
 			mx  , my+1, mx, my,
-			cost+1, pinid);
+			cost+10, pinid);
 		astar_check(
 			openlist, tarlist, perchip,
 			map, history,
 			mx+1, my  , mx, my,
-			cost+1, pinid);
+			cost+10, pinid);
 		astar_check(
 			openlist, tarlist, perchip,
 			map, history,
 			mx-1, my  , mx, my,
-			cost+1, pinid);
+			cost+10, pinid);
 		int size_new = openlist.size();
 		/*
 		if(size_old == size_new){
@@ -953,6 +995,7 @@ void drawwire_astar(design* ds, position* pos, u32* pix){
 		printf("index=%d,pin=%d,size=%zu{\n", j, perpinpos[j][0].pinid, perpinpos.size());
 
 		drawwire_dilate((u32*)map, perchipinfo);
+		drawwire_costmap((u32*)map, pos);
 		int ret = drawwire_astar_one(
 			(u32*)pix, (u32*)map, (u32*)parent,
 			perchipinfo, perpinpos[j],
@@ -1028,6 +1071,7 @@ void drawwire_astar_lesspinfirst(design* ds, position* pos, u32* pix){
 		printf("index=%d,pin=%d,size=%zu{\n", j, pinid, perpinpos[j].size());
 
 		drawwire_dilate((u32*)map, perchipinfo);
+		drawwire_costmap((u32*)map, pos);
 		int ret = drawwire_astar_one(
 			(u32*)pix, (u32*)map, (u32*)history,
 			perchipinfo, perpinpos[j],

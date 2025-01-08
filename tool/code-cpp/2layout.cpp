@@ -32,12 +32,12 @@ void layout(design* ds, position* pos){
 	//chip at middle
 	float sq = sqrt(cnt_chip);
 	int ce = ceil(sq);
-	int sz = 1024/ce/4;
+	int sz = 1024/(ce*2+1)/2;
 	printf("sqrt=%f,ceil=%d\n", sq, ce);
 
 	for(int j=0;j<cnt_chip;j++){
-		fx = 1024*(float)((j%ce)+1)/(ce+1);
-		fy = 1024*(float)((j/ce)+1)/(ce+1);
+		fx = 1024*(float)((j%ce)*2+1.5)/(ce*2+1);
+		fy = 1024*(float)((j/ce)*2+1.5)/(ce*2+1);
 		printf("chip %d: %f,%f\n", j, fx, fy);
 		pos->_chip.push_back({fx, fy, 0});
 	}
