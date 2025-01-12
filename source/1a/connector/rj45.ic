@@ -1,0 +1,38 @@
+rj45{
+pinout{
+	rx+
+	rx-
+	tx+
+	4
+	5
+	tx-
+	7
+	8
+}
+}
+
+t568a{
+pinout{
+	rx+
+	rx-
+	tx+
+	d3+
+	d3-
+	tx-
+	d4+
+	d4-
+}
+}
+
+t568b{
+pinout{
+	tx+
+	tx-
+	rx+
+	d3+
+	d3-
+	rx-
+	d4+
+	d4-
+}
+}

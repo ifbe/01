@@ -1,0 +1,209 @@
+pcix1{
+pinout{
+//
+01    12v, prsnt#1
+02    12v, 12v
+03   rsvd, 12v
+04    gnd, gnd
+05  smclk, jtag2
+06  smdat, jtag3
+07    gnd, jtag4
+08    3v3, jtag5
+09  jtag1, 3v3
+10 3v3aux, 3v3
+11  wake#, pwrgd
+//
+12    rsvd, gnd
+13     gnd, refclk+
+14   hso0+, refclk-
+15   hso0-, gnd
+16     gnd, hsi0+
+17 prsnt#2, hsi0-
+18     gnd, gnd
+}
+}
+
+pcix4{
+pinout{
+//
+01    12v, prsnt#1
+02    12v, 12v
+03   rsvd, 12v
+04    gnd, gnd
+05  smclk, jtag2
+06  smdat, jtag3
+07    gnd, jtag4
+08    3v3, jtag5
+09  jtag1, 3v3
+10 3v3aux, 3v3
+11  wake#, pwrgd
+//
+12    rsvd, gnd
+13     gnd, refclk+
+14   hso0+, refclk-
+15   hso0-, gnd
+16     gnd, hsi0+
+17 prsnt#2, hsi0-
+18     gnd, gnd
+19   hso1+, rsvd
+20   hso1-, gnd
+21     gnd, hsi1+
+22     gnd, hsi1-
+23   hso2+, gnd
+24   hso2-, gnd
+25     gnd, hsi2+
+26     gnd, hsi2-
+27   hso3+, gnd
+28   hso3-, gnd
+29     gnd, hsi3+
+30    rsvd, hsi3-
+31 prsnt#2, gnd
+32     gnd, rsvd
+}
+}
+
+pcix8{
+pinout{
+//
+01    12v, prsnt#1
+02    12v, 12v
+03   rsvd, 12v
+04    gnd, gnd
+05  smclk, jtag2
+06  smdat, jtag3
+07    gnd, jtag4
+08    3v3, jtag5
+09  jtag1, 3v3
+10 3v3aux, 3v3
+11  wake#, pwrgd
+//
+12    rsvd, gnd
+13     gnd, refclk+
+14   hso0+, refclk-
+15   hso0-, gnd
+16     gnd, hsi0+
+17 prsnt#2, hsi0-
+18     gnd, gnd
+19   hso1+, rsvd
+20   hso1-, gnd
+21     gnd, hsi1+
+22     gnd, hsi1-
+23   hso2+, gnd
+24   hso2-, gnd
+25     gnd, hsi2+
+26     gnd, hsi2-
+27   hso3+, gnd
+28   hso3-, gnd
+29     gnd, hsi3+
+30    rsvd, hsi3-
+31 prsnt#2, gnd
+32     gnd, rsvd
+33   hso4+, rsvd
+34   hso4-, gnd
+35     gnd, hsi4+
+36     gnd, hsi4-
+37   hso5+, gnd
+38   hso5-, gnd
+39     gnd, hsi5+
+40     gnd, hsi5-
+41   hso6+, gnd
+42   hso6-, gnd
+43     gnd, hsi6+
+44     gnd, hsi6-
+45   hso7+, gnd
+46   hso7-, gnd
+47     gnd, hsi7+
+48 prsnt#2, hsi7-
+49     gnd, gnd
+}
+}
+
+pcix16{
+pinout{
+//
+01    12v, prsnt#1
+02    12v, 12v
+03   rsvd, 12v
+04    gnd, gnd
+05  smclk, jtag2
+06  smdat, jtag3
+07    gnd, jtag4
+08    3v3, jtag5
+09  jtag1, 3v3
+10 3v3aux, 3v3
+11  wake#, pwrgd
+//
+12    rsvd, gnd
+13     gnd, refclk+
+14   hso0+, refclk-
+15   hso0-, gnd
+16     gnd, hsi0+
+17 prsnt#2, hsi0-
+18     gnd, gnd
+19   hso1+, rsvd
+20   hso1-, gnd
+21     gnd, hsi1+
+22     gnd, hsi1-
+23   hso2+, gnd
+24   hso2-, gnd
+25     gnd, hsi2+
+26     gnd, hsi2-
+27   hso3+, gnd
+28   hso3-, gnd
+29     gnd, hsi3+
+30    rsvd, hsi3-
+31 prsnt#2, gnd
+32     gnd, rsvd
+33   hso4+, rsvd
+34   hso4-, gnd
+35     gnd, hsi4+
+36     gnd, hsi4-
+37   hso5+, gnd
+38   hso5-, gnd
+39     gnd, hsi5+
+40     gnd, hsi5-
+41   hso6+, gnd
+42   hso6-, gnd
+43     gnd, hsi6+
+44     gnd, hsi6-
+45   hso7+, gnd
+46   hso7-, gnd
+47     gnd, hsi7+
+48 prsnt#2, hsi7-
+49     gnd, gnd
+50   hso8+, rsvd
+51   hso8-, gnd
+52     gnd, hsi8+
+53     gnd, hsi8-
+54   hso9+, gnd
+55   hso9-, gnd
+56     gnd, hsi9+
+57     gnd, hsi9-
+58  hso10+, gnd
+59  hso10-, gnd
+60     gnd, hsi10+
+61     gnd, hsi10-
+62  hso11+, gnd
+63  hso11-, gnd
+64     gnd, hsi11+
+65     gnd, hsi11-
+66  hso12+, gnd
+67  hso12-, gnd
+68     gnd, hsi12+
+69     gnd, hsi12-
+70  hso13+, gnd
+71  hso13-, gnd
+72     gnd, hsi13+
+73     gnd, hsi13-
+74  hso14+, gnd
+75  hso14-, gnd
+76     gnd, hsi14+
+77     gnd, hsi14-
+78  hso15+, gnd
+79  hso15-, gnd
+80     gnd, hsi15+
+81 prsnt#2, hsi15-
+82  rsvd#2, gnd
+}
+}
+

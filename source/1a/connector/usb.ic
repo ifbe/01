@@ -1,0 +1,56 @@
+//0v d+ d- 5v
+usb2.0{
+pinout{
+	0v
+	d+
+	d-
+	5v
+}
+}
+
+//   gnd   d.+   d.-   5v0
+//tx-   tx+   gnd   rx-   rx+
+usb3.0{
+pinout{
+	0v
+	d+
+	d-
+	5v
+	tx-
+	tx+
+	gnd
+	rx-
+	rx+
+}
+}
+
+//gnd tx1+ tx1- vbus  cc1 d+ d- sbu1 vbus rx2- rx2+ gnd
+//gnd rx1+ rx1- vbus sbu2 d- d+  cc2 vbus tx2- tx2+ gnd
+typec{
+pinout{
+	gnd
+	tx1+
+	tx1-
+	vbus
+	cc1
+	d+
+	d-
+	sbu1
+	vbus
+	rx2-
+	rx2+
+	gnd
+	gnd
+	rx1+
+	rx1-
+	vbus
+	sbu2
+	d-
+	d+
+	cc2
+	vbus
+	tx2-
+	tx2+
+	gnd
+}
+}

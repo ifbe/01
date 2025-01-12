@@ -1,0 +1,15 @@
+//dcd   rxd   txd   dtr   sg
+//   dsr   rts   cts   ri
+rs232_9pin{
+pinout{
+	dcd
+	rxd
+	txd
+	dtr
+	sg
+	dsr
+	rts
+	cts
+	ri
+}
+}
