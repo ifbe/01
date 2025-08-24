@@ -23,8 +23,8 @@ void layout(session* sess, design* ds, position* pos){
 	int cnt_po = ds->_pinout.size();
 	int cnt_pi = ds->_pinin.size();
 	int cnt_chip = ds->_chip.size();
-	int cnt_logic = ds->_logic.size();
-	printf("layout: %d,%d,%d,%d\n", cnt_po, cnt_pi, cnt_chip, cnt_logic);
+	int cnt_connect = ds->_connect.size();
+	printf("layout: %d,%d,%d,%d\n", cnt_po, cnt_pi, cnt_chip, cnt_connect);
 
 	float fx,fy;
 
@@ -62,11 +62,11 @@ void layout(session* sess, design* ds, position* pos){
 	printf("generate chipviewwire\n");
 	int delta;
 	std::vector<std::string> pinglobal;
-	for(int j=0;j<cnt_logic;j++){
+	for(int j=0;j<cnt_connect;j++){
 		//one chip
 		int findchip = -1;
 		for(int k=0;k<ds->_chip.size();k++){
-			if(ds->_logic[j]->name == ds->_chip[k]->name){
+			if(ds->_connect[j]->chipname == ds->_chip[k]->name){
 				findchip = k;
 				break;
 			}
@@ -87,7 +87,7 @@ void layout(session* sess, design* ds, position* pos){
 
 		//each pin
 		int m;
-		std::vector<std::string>& pinname = ds->_logic[j]->pinname;
+		std::vector<std::string>& pinname = ds->_connect[j]->pinname;
 		std::vector<pindef*>& po = ds->_pinout;
 		std::vector<pindef*>& pi = ds->_pinin;
 		std::vector<chipfootpin> cfl;

@@ -44,6 +44,10 @@ public:
 
 class wiredef{
 public:
+	struct pinpair{
+		std::string chippin;
+		std::string selfpin;
+	};
 	wiredef(u8* buf, int len);
 	wiredef(std::string s);
 	wiredef(wiredef* c);
@@ -52,7 +56,7 @@ public:
 	void addpin(u8* buf, int len);
 	void parsepin(u8* p, int len);
 public:
-	std::string name;
+	std::string chipname;
 	std::vector<std::string> pinname;
 };
 
@@ -69,8 +73,8 @@ public:
 	//std::vector<pindef*> _pinglobal;		//todo
 	std::vector<chipdef*> _chip;
 	//wire space
-	std::vector<wiredef*> _logic;
-	//
+	std::vector<wiredef*> _connect;
+	//pcb space
 	std::map<std::string, posxyz> _layout; 
 };
 

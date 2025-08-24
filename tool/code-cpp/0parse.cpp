@@ -64,20 +64,20 @@ wiredef::wiredef(u8* buf, int len){
 #if CONFIG_PRINT_CONSTRUCT==1
 	printf("contruct_buflen wiredef %.*s\n", len,buf);
 #endif
-	name = std::string((char*)buf, len);
+	chipname = std::string((char*)buf, len);
 }
 wiredef::wiredef(std::string s){
 #if CONFIG_PRINT_CONSTRUCT==1
 	printf("contruct_string wiredef %s\n", s.c_str());
 #endif
-	name = s;
+	chipname = s;
 }
-wiredef::wiredef(wiredef* c){
+wiredef::wiredef(wiredef* in){
 #if CONFIG_PRINT_CONSTRUCT==1
-	printf("contruct_copy wiredef %s\n", c->name.c_str());
+	printf("contruct_copy wiredef %s\n", in->chipname.c_str());
 #endif
-	name = c->name;
-	for(auto p : c->pinname)pinname.push_back(p);
+	chipname = in->chipname;
+	for(auto p : in->pinname)pinname.push_back(p);
 }
 wiredef::~wiredef(){
 #if CONFIG_PRINT_DESTRUCT==1
@@ -144,7 +144,7 @@ design::design(design* c){
 	for(auto p : c->_pinout)_pinout.push_back(new pindef(p));
 	for(auto p : c->_pinin)_pinin.push_back(new pindef(p));
 	for(auto p : c->_chip)_chip.push_back(new chipdef(p));
-	for(auto p : c->_logic)_logic.push_back(new wiredef(p));
+	for(auto p : c->_connect)_connect.push_back(new wiredef(p));
 }
 design::~design(){
 #if CONFIG_PRINT_DESTRUCT==1
@@ -153,7 +153,7 @@ design::~design(){
 	for(auto p : _pinout)delete(p);
 	for(auto p : _pinin)delete(p);
 	for(auto p : _chip)delete(p);
-	for(auto p : _logic)delete(p);
+	for(auto p : _connect)delete(p);
 }
 void design::shrinkunused(){
 	for(auto it = _chip.begin();it != _chip.end();){
@@ -165,10 +165,10 @@ void design::shrinkunused(){
 			it++;
 		}
 	}
-	for(auto it = _logic.begin();it != _logic.end();){
-		if('/' == (*it)->name.c_str()[0]){
+	for(auto it = _connect.begin();it != _connect.end();){
+		if('/' == (*it)->chipname.c_str()[0]){
 			delete (*it);
-			it = _logic.erase(it);
+			it = _connect.erase(it);
 		}
 		else{
 			it++;
@@ -282,7 +282,7 @@ void parse(filecontext* ctx, u8* buf, int len){
 
 					wi->parsepin(buf+firstkuohao+1, j-firstkuohao);
 
-					comp->_logic.push_back(wi);
+					comp->_connect.push_back(wi);
 				}
 				else if(LAYOUT == currsection){
 					printf("what=<%.*s> wholeline=%d<%.*s>\n",

@@ -38,9 +38,9 @@ void printdesign(design* c){
 	printf("}chip(cnt=%d)\n", cnt);
 
 	cnt = 0;
-	printf("logic(size=%ld){\n", c->_logic.size());
-	for(auto p : c->_logic){
-		if('/' != p->name.c_str()[0]){
+	printf("logic(size=%ld){\n", c->_connect.size());
+	for(auto& p : c->_connect){
+		if('/' != p->chipname.c_str()[0]){
 			cnt++;
 		}
 #if CONFIG_PRINT_HIDE_COMMENTED==1
@@ -48,8 +48,8 @@ void printdesign(design* c){
 			continue;
 		}
 #endif
-		printf("	%s(", p->name.c_str());
-		for(auto t : p->pinname)printf("%s%c", t.c_str(), (t==p->pinname.back()) ? ')' : ' ');
+		printf("	%s(", p->chipname.c_str());
+		for(auto& t : p->pinname)printf("%s%c", t.c_str(), (t==p->pinname.back()) ? ')' : ' ');
 		printf("\n");
 	}
 	printf("}logic(cnt=%d)\n", cnt);
@@ -73,7 +73,7 @@ std::string translatepinname(std::string s0, design* in, wiredef* wi)
 	//2 pinin: refname/pinname
 	for(j=0;j<in->_pinin.size();j++){
 		if(s0 == in->_pinin[j]->name){
-			return wi->name + "/" + s0;
+			return wi->chipname + "/" + s0;
 		}
 	}
 
@@ -82,28 +82,28 @@ std::string translatepinname(std::string s0, design* in, wiredef* wi)
 }
 void expand_real(design* out, design* in, wiredef* wi){
 	printf("in: name=%s\n", in->name.c_str());
-	printf("wi: name=%s, pin=%s...\n", wi->name.c_str(), wi->pinname[0].c_str());
+	printf("wi: name=%s, pin=%s...\n", wi->chipname.c_str(), wi->pinname[0].c_str());
 
 	//inner pin: rename and insert
 	for(auto& p : in->_pinin){
-		out->_pinin.push_back(new pindef(wi->name + "/" + p->name));
+		out->_pinin.push_back(new pindef(wi->chipname + "/" + p->name));
 	}
 
 	//inner chip: rename and insert
 	for(auto& p : in->_chip){
-		out->_chip.push_back(new chipdef(wi->name + "/" + p->name, p->cname));
+		out->_chip.push_back(new chipdef(wi->chipname + "/" + p->name, p->cname));
 	}
 
 	//wiring
-	for(auto& p : in->_logic){
-		wiredef* tmp = new wiredef(wi->name + "/" + p->name);
+	for(auto& p : in->_connect){
+		wiredef* tmp = new wiredef(wi->chipname + "/" + p->chipname);
 
 		for(auto q : p->pinname){
 			std::string s = translatepinname(q, in, wi);
 			tmp->addpin(s);
 		}
 
-		out->_logic.push_back(tmp);
+		out->_connect.push_back(tmp);
 	}
 
 	//layout
@@ -145,8 +145,8 @@ void expand_onelayer(session* sess, design* ds, int last){
 		}
 
 		foundinlogic = -1;
-		for(k=0;k<ds->_logic.size();k++){
-			if(ds->_chip[j]->name == ds->_logic[k]->name){
+		for(k=0;k<ds->_connect.size();k++){
+			if(ds->_chip[j]->name == ds->_connect[k]->chipname){
 				printf("at logic %d\n", k);
 				foundinlogic = k;
 				break;
@@ -157,11 +157,11 @@ void expand_onelayer(session* sess, design* ds, int last){
 			goto prepnext;
 		}
 
-		expand_real(ds, sess->file[foundinsess]->cx[foundinfile], ds->_logic[foundinlogic]);
+		expand_real(ds, sess->file[foundinsess]->cx[foundinfile], ds->_connect[foundinlogic]);
 
 		//comment this chip and this wire
 		ds->_chip[j]->name = "//" + ds->_chip[j]->name;
-		ds->_logic[foundinlogic]->name = "//" + ds->_logic[foundinlogic]->name;
+		ds->_connect[foundinlogic]->chipname = "//" + ds->_connect[foundinlogic]->chipname;
 
 prepnext:
 		printf("}\n");
