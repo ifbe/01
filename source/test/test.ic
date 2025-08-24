@@ -1,0 +1,12 @@
+myboard{
+pinout{
+	dp
+	dm
+}
+chip{
+	esp : esp32s3
+}
+logic{
+	esp(io19@dp, io20@dm)
+}
+}

@@ -5,6 +5,14 @@ pmos{
 		d
 		g
 	}
+	layout{
+		g(-0.5, -1)
+		d(   0, -1)
+		s( 0.5, -1)
+	}
+	formula{
+		if(g-s > thres)d=g
+	}
 }
 
 //if(g-b>threshold)w0=w1
@@ -24,6 +32,11 @@ nmos{
 		d
 		s
 		g
+	}
+	layout{
+		g(-0.5, -1)
+		d(   0, -1)
+		s( 0.5, -1)
 	}
 }
 

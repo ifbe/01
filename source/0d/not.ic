@@ -3,6 +3,10 @@ pinout{
 	i
 	o
 }
+pinglobal{
+	vdd
+	gnd
+}
 chip{
 	p : pmos
 	n : nmos

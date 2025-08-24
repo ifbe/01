@@ -2,9 +2,24 @@
 #define CONFIG_DEBUG_PPM_ASTAR 1
 
 
+design* from_sess_find_design(session* sess, std::string& name)
+{
+	int j;
+	for(auto& ctx : sess->file){
+                for(j=0;j<ctx->cx.size();j++){
+                        if(name == ctx->cx[j]->name){
+                                return ctx->cx[j];
+                        }
+                }
+        }
+	return 0;
+}
+void from_design_find_position(design* dsn, std::string& pin)
+{
+}
 
 
-void layout(design* ds, position* pos){
+void layout(session* sess, design* ds, position* pos){
 	int cnt_po = ds->_pinout.size();
 	int cnt_pi = ds->_pinin.size();
 	int cnt_chip = ds->_chip.size();
@@ -61,16 +76,38 @@ void layout(design* ds, position* pos){
 			break;
 		}
 
+		//debug
+		printf("index=%d name=%s model=%s\n", findchip, ds->_chip[findchip]->name.c_str(), ds->_chip[findchip]->cname.c_str());
+		design* dsn = from_sess_find_design(sess, ds->_chip[findchip]->cname);
+		if(dsn){
+			for(auto& it : dsn->_layout){
+				printf("name=%s pos=%f,%f\n", it.first.c_str(), it.second.x, it.second.y);
+			}
+		}
+
 		//each pin
 		int m;
-		std::vector<std::string> pinname = ds->_logic[j]->pinname;
-		std::vector<pindef*> po = ds->_pinout;
-		std::vector<pindef*> pi = ds->_pinin;
+		std::vector<std::string>& pinname = ds->_logic[j]->pinname;
+		std::vector<pindef*>& po = ds->_pinout;
+		std::vector<pindef*>& pi = ds->_pinin;
 		std::vector<chipfootpin> cfl;
 		for(int k=0;k<pinname.size();k++){
-			printf("->%d,%d,%s\n", j,k,pinname[k].c_str());
-			fx = -sz + (float)(k+1) * (sz*2) / (pinname.size()+1);		//must convert to float, or crash
-			fy = -sz + 1;
+			printf("->%d,%d,pname=%s,cname=%s\n", j, k, pinname[k].c_str(), dsn->_pinout[k]->name.c_str());
+			int find = 0;
+			if(dsn){
+				auto it = dsn->_layout.find(dsn->_pinout[k]->name.c_str());
+				if(it != dsn->_layout.end()){
+					posxyz& pos = it->second;
+					fx = sz * pos.x;
+					fy = -sz * pos.y;
+					find = true;
+					printf("debug:%f,%f,%f,%f, %d\n", pos.x, pos.y, fx, fy, sz);
+				}
+			}
+			if(0 == find){
+				fx = -sz + (float)(k+1) * (sz*2) / (pinname.size()+1);		//must convert to float, or crash
+				fy = -sz + 1;
+			}
 			pos->_chipfoot[findchip].push_back({fx, fy, 0.0});
 
 			//pinout

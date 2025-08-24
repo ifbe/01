@@ -7,23 +7,23 @@ void printdesign(design* c){
 	printf("%s{\n", c->name.c_str());
 
 	int cnt = 0;
-	printf("pinout:size=%ld\n", c->_pinout.size());
+	printf("pinout(size=%ld){\n", c->_pinout.size());
 	for(auto p : c->_pinout){
 		printf("	%s\n", p->name.c_str());
 		cnt++;
 	}
-	printf("pinout:cnt=%d\n", cnt);
+	printf("}pinout(cnt=%d)\n", cnt);
 
 	cnt = 0;
-	printf("pinin:size=%ld\n", c->_pinin.size());
+	printf("pinin(size=%ld){\n", c->_pinin.size());
 	for(auto p : c->_pinin){
 		printf("	%s\n", p->name.c_str());
 		cnt++;
 	}
-	printf("pinin:cnt=%d\n", cnt);
+	printf("}pinin(cnt=%d)\n", cnt);
 
 	cnt = 0;
-	printf("chip:size=%ld\n", c->_chip.size());
+	printf("chip(size=%ld){\n", c->_chip.size());
 	for(auto p : c->_chip){
 		if('/' != p->name.c_str()[0]){
 			cnt++;
@@ -35,10 +35,10 @@ void printdesign(design* c){
 #endif
 		printf("	%s : %s\n", p->name.c_str(), p->cname.c_str());
 	}
-	printf("chip:cnt=%d\n", cnt);
+	printf("}chip(cnt=%d)\n", cnt);
 
 	cnt = 0;
-	printf("logic:size=%ld\n", c->_logic.size());
+	printf("logic(size=%ld){\n", c->_logic.size());
 	for(auto p : c->_logic){
 		if('/' != p->name.c_str()[0]){
 			cnt++;
@@ -52,7 +52,7 @@ void printdesign(design* c){
 		for(auto t : p->pinname)printf("%s%c", t.c_str(), (t==p->pinname.back()) ? ')' : ' ');
 		printf("\n");
 	}
-	printf("logic:cnt=%d\n", cnt);
+	printf("}logic(cnt=%d)\n", cnt);
 
 	printf("}\n");
 }
@@ -85,17 +85,17 @@ void expand_real(design* out, design* in, wiredef* wi){
 	printf("wi: name=%s, pin=%s...\n", wi->name.c_str(), wi->pinname[0].c_str());
 
 	//inner pin: rename and insert
-	for(auto p : in->_pinin){
+	for(auto& p : in->_pinin){
 		out->_pinin.push_back(new pindef(wi->name + "/" + p->name));
 	}
 
 	//inner chip: rename and insert
-	for(auto p : in->_chip){
+	for(auto& p : in->_chip){
 		out->_chip.push_back(new chipdef(wi->name + "/" + p->name, p->cname));
 	}
 
-	//inner logic: ???
-	for(auto p : in->_logic){
+	//wiring
+	for(auto& p : in->_logic){
 		wiredef* tmp = new wiredef(wi->name + "/" + p->name);
 
 		for(auto q : p->pinname){
@@ -104,6 +104,11 @@ void expand_real(design* out, design* in, wiredef* wi){
 		}
 
 		out->_logic.push_back(tmp);
+	}
+
+	//layout
+	for(auto& p : in->_layout){
+		printf("xxxxxxxxxxxxxxxxx\n");
 	}
 }
 
@@ -114,7 +119,7 @@ void expand_onelayer(session* sess, design* ds, int last){
 	int foundinfile = -1;
 	int foundinlogic = -1;
 	for(j=last;j<sz;j++){
-		printf("cname=%s{{\n", ds->_chip[j]->cname.c_str());
+		printf("cname=%s{\n", ds->_chip[j]->cname.c_str());
 
 		foundinsess = -1;
 		foundinfile = -1;
@@ -159,14 +164,14 @@ void expand_onelayer(session* sess, design* ds, int last){
 		ds->_logic[foundinlogic]->name = "//" + ds->_logic[foundinlogic]->name;
 
 prepnext:
-		printf("}}\n");
+		printf("}\n");
 	}
 }
 
 design* expand(session* sess, std::string name){
 	int j;
 	design* found = 0;
-	for(auto ctx : sess->file){
+	for(auto& ctx : sess->file){
 		for(j=0;j<ctx->cx.size();j++){
 			if(name == ctx->cx[j]->name){
 				found = ctx->cx[j];
@@ -190,7 +195,7 @@ design* expand(session* sess, std::string name){
 
 	theone->shrinkunused();
 
-	printdesign(theone);
+	//printdesign(theone);
 
 	//delete theone;
 	return theone;

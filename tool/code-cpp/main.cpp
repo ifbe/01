@@ -1,8 +1,77 @@
 #include "main.hpp"
+#include <cstdlib>
 #define CONFIG_PRINT_CONSTRUCT 1
 #define CONFIG_PRINT_DESTRUCT 0
 
 
+posxyz::posxyz(float x_, float y_, float z_) : x(x_), y(y_), z(z_) {
+}
+posxyz::posxyz(u8* buf, int len){
+	char* str = (char*)buf;
+	int j = 0;
+	char* endptr;
+
+	//remove space
+	while( (j<len) && (str[j]==' ' || str[j]=='\t') )j++;
+	if(j>=len){
+		x = y = z = 0;
+		goto byebye;
+	}
+
+	//x = std::stof(str+j);
+	x = strtof(str+j, &endptr);
+	if(endptr == str+j){
+		x = y = z = 0;
+		goto byebye;
+	}
+
+	//find ,
+	while( (j<len) && (str[j]!=',') )j++;
+	if(j>=len){
+		y = z = 0;
+		goto byebye;
+	}
+	j++;
+
+	//remove space
+	while( (j<len) && (str[j]==' ' || str[j]=='\t') )j++;
+	if(j>=len){
+		y = z = 0;
+		goto byebye;
+	}
+
+	//y
+	y = strtof(str+j, &endptr);
+	if(endptr == str+j){
+		y = z = 0;
+		goto byebye;
+	}
+
+	//find ,
+	while( (j<len) && (str[j]!=',') )j++;
+	if(j>=len){
+		z = 0;
+		goto byebye;
+	}
+	j++;
+
+	//remove space
+	while( (j<len) && (str[j]==' ' || str[j]=='\t') )j++;
+	if(j>=len){
+		z = 0;
+		goto byebye;
+	}
+
+	//z
+	z = strtof(str+j, &endptr);
+	if(endptr == str+j){
+		z = 0;
+		goto byebye;
+	}
+
+byebye:
+	printf("%f,%f,%f\n", x, y, z);
+}
 
 
 filecontext::filecontext(u8* buf){
@@ -51,11 +120,13 @@ void printsession(session* sess){
 
 
 
-//
+//step0: file to mem
 void parse(filecontext* ctx, u8* buf, int len);
+//step1: expand until cannot do further
 design* expand(session* sess, std::string name);
-//
-void layout(design* ds, position* pos);
+//step2: decide chip and pin position
+void layout(session* sess, design* ds, position* pos);
+//step3: auto wiring, no intersect
 void draw(session* sess, design* ds, position* pos, u8* pix);
 
 
@@ -88,11 +159,19 @@ int main(int argc, char** argv)
 	printf("name to expand:");
 	std::string input;
 	std::cin >> input;
+
 	design* it = expand(sess, input);
 	if(0 == it)return 0;
 
+	printf("name to layout:");
+	std::cin >> input;
+
 	position pos = position();
-	layout(it, &pos);
+	layout(sess, it, &pos);
+
+	printf("name to draw:");
+	std::cin >> input;
+
 	draw(sess, it, &pos, buf);
 
 	delete it;

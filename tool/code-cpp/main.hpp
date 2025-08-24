@@ -6,12 +6,19 @@
 #include<iostream>
 #include<vector>
 #include<algorithm>
+#include<map>
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
 typedef unsigned int u64;
 
 
+struct posxyz{
+	float x,y,z;
+	posxyz(u8* str, int len);
+	posxyz(float ix, float iy, float iz);
+	//posxyz(posxyz& in);
+};
 
 
 class pindef{
@@ -43,6 +50,7 @@ public:
 	~wiredef();
 	void addpin(std::string s);
 	void addpin(u8* buf, int len);
+	void parsepin(u8* p, int len);
 public:
 	std::string name;
 	std::vector<std::string> pinname;
@@ -60,7 +68,10 @@ public:
 	std::vector<pindef*> _pinin;
 	//std::vector<pindef*> _pinglobal;		//todo
 	std::vector<chipdef*> _chip;
+	//wire space
 	std::vector<wiredef*> _logic;
+	//
+	std::map<std::string, posxyz> _layout; 
 };
 
 
@@ -86,9 +97,6 @@ public:
 
 
 
-struct posxyz{
-	float x,y,z;
-};
 struct chipfootpin{
 	//float sx,sy;
 	int chipid;

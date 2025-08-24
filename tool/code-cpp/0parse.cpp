@@ -84,6 +84,34 @@ wiredef::~wiredef(){
 	printf("delete wiredef %s\n", name.c_str());
 #endif
 }
+void wiredef::parsepin(u8* p, int len)
+{
+	/*
+	p0(vcc, oa, en0)
+	*/
+	int k;
+	int now = 0;
+	int round = 0;
+	for(k=0;k<len;k++){
+		switch(p[k]){
+		case ',':
+		case ' ':
+		case '\t':
+		case ')':
+			if(1 == round){
+				addpin(p+now, k-now);
+				round = !round;
+			}
+			if(')'==p[k])k=len;	//big break
+			break;
+		default:
+			if(0 == round){
+				now = k;
+				round = !round;
+			}
+		}
+	}
+}
 void wiredef::addpin(std::string s){
 	pinname.push_back(s);
 }
@@ -164,7 +192,8 @@ void parse(filecontext* ctx, u8* buf, int len){
 #define PINOUT 1
 #define PININ 2
 #define CHIP 3
-#define LOGIC 4
+#define CONNECT 4
+#define LAYOUT 5
 	int firstbyte = 0;
 	int firststr = -1;
 	int firstmaohao = -1;		//:
@@ -248,36 +277,20 @@ void parse(filecontext* ctx, u8* buf, int len){
 					}
 					}
 				}
-				else if(LOGIC == currsection){
+				else if(CONNECT == currsection){
 					wi = new wiredef(buf+firststr, firstkuohao-firststr);
-					/*
-					p0(vcc, oa, en0)
-					*/
-					u8* p = buf+firstkuohao+1;
-					int k;
-					int now = 0;
-					int round = 0;
-					for(k=0;k<j-firstkuohao;k++){
-					switch(p[k]){
-					case ',':
-					case ' ':
-					case '\t':
-					case ')':
-						if(1 == round){
-							wi->addpin(p+now, k-now);
-							round = !round;
-						}
-						if(')'==p[k])k=j-firstkuohao;	//big break
-						break;
-					default:
-						if(0 == round){
-							now = k;
-							round = !round;
-						}
-					}
-					}
+
+					wi->parsepin(buf+firstkuohao+1, j-firstkuohao);
 
 					comp->_logic.push_back(wi);
+				}
+				else if(LAYOUT == currsection){
+					printf("what=<%.*s> wholeline=%d<%.*s>\n",
+						firstkuohao-firststr,buf+firststr,
+						j-firststr, j-firststr, buf+firststr);
+					std::string str((char*)buf+firststr, firstkuohao-firststr);
+					
+					comp->_layout.emplace(str, posxyz(buf+firstkuohao+1, j-firstkuohao-1));
 				}
 			}
 			linecount++;
@@ -307,7 +320,10 @@ void parse(filecontext* ctx, u8* buf, int len){
 						currsection = CHIP;
 					}
 					else if(strncmp("logic", (char*)buf+firststr, j-firststr) == 0){
-						currsection = LOGIC;
+						currsection = CONNECT;
+					}
+					else if(strncmp("layout", (char*)buf+firststr, j-firststr) == 0){
+						currsection = LAYOUT;
 					}
 				}
 				firststr = -1;

@@ -386,8 +386,9 @@ void drawchip(design* ds, position* pos, u8* pix){
 		ix = pos->_chip[j].x;
 		iy = pos->_chip[j].y;
 		drawline_rect(pix, 0x888888, ix-sz, iy-sz, ix+sz, iy+sz);
-		printf("ix=%d,iy=%d,name=%s\n", ix, iy, (u8*)ds->_chip[j]->cname.c_str());
-		drawstring_atpoint((u32*)pix, 0x888888, ix, iy, (u8*)ds->_chip[j]->cname.c_str(), 0);
+		printf("ix=%d,iy=%d,name=%s,cname=%s\n", ix, iy, ds->_chip[j]->name.c_str(), ds->_chip[j]->cname.c_str());
+		drawstring_atpoint((u32*)pix, 0x888888, ix, iy-10, (u8*)ds->_chip[j]->name.c_str(), 0);
+		drawstring_atpoint((u32*)pix, 0x888888, ix, iy+10, (u8*)ds->_chip[j]->cname.c_str(), 0);
 	}
 }
 void drawfoot(design* ds, position* pos, u8* pix){
@@ -430,7 +431,7 @@ void drawpinoutname(session* sess, design* ds, position* pos, u8* pix){
 		if(0 == ds0)continue;
 		//
 		for(int k=0;k<pos->_chipfoot[j].size();k++){
-			printf("drawpinoutname: %d,%d,%p\n", j, k, ds0);
+			//printf("drawpinoutname: %d,%d,%p\n", j, k, ds0);
 			ix = pos->_chip[j].x + pos->_chipfoot[j][k].x;
 			iy = pos->_chip[j].y + pos->_chipfoot[j][k].y;
 			drawascii((u32*)pix, 0xffffff, ix-4, iy, ds0->_pinout[k]->name.c_str()[0]);
@@ -536,6 +537,11 @@ void drawwire_pinview(position* pos, u8* pix){
 #define MAP_CHIP_FINAL (MAP_CHIP_FIRST+0xffff)
 #define MAP_WIRE_FIRST 0xffc00000
 #define MAP_WIRE_FINAL (MAP_WIRE_FIRST+0xffff)
+//
+#define DILATE_BOT 1
+#define DILATE_TOP 2
+#define DILATE_LEFT 4
+#define DILATE_RIGHT 8
 void drawmap_chip(u32* map, position* pos){
 	int cnt_chip = pos->_chip.size();
 	float sq = sqrt(cnt_chip);
@@ -549,17 +555,42 @@ void drawmap_chip(u32* map, position* pos){
 		drawline_rect((u8*)map, MAP_CHIP_FIRST+j, ix-sz, iy-sz, ix+sz, iy+sz);
 	}
 }
-void drawmap_dontdilate(u32* map, int x, int y)
+void drawmap_dontdilate(u32* map, int dir, int x, int y)
 {
-	for(int m=0;m<=CONFIG_NOT_CONNECTED_PIXEL;m++){
-		if(y<m)break;
-		map[(y-m)*1024+x] = MAP_VAL_DONTDILATE;
+	if(dir & DILATE_TOP){
+		for(int m=0;m<=CONFIG_NOT_CONNECTED_PIXEL;m++){
+			if(y<m)break;
+			map[(y-m)*1024+x] = MAP_VAL_DONTDILATE;
+		}
+	}
+	if(dir & DILATE_BOT){
+		for(int m=0;m<=CONFIG_NOT_CONNECTED_PIXEL;m++){
+			if(y+m >= 1024)break;
+			map[(y+m)*1024+x] = MAP_VAL_DONTDILATE;
+		}
+	}
+	if(dir & DILATE_LEFT){
+		for(int m=0;m<=CONFIG_NOT_CONNECTED_PIXEL;m++){
+			if(x<m)break;
+			map[y*1024+x-m] = MAP_VAL_DONTDILATE;
+		}
+	}
+	if(dir & DILATE_RIGHT){
+		for(int m=0;m<=CONFIG_NOT_CONNECTED_PIXEL;m++){
+			if(x+m >= 1024)break;
+			map[y*1024+x+m] = MAP_VAL_DONTDILATE;
+		}
 	}
 }
 void drawmap_begin(design* ds, position* pos, u32* map)
 {
 	drawcolor((u8*)map, 0);
 	drawmap_chip((u32*)map, pos);
+
+	int cnt_chip = pos->_chip.size();
+	float sq = sqrt(cnt_chip);
+	int ce = ceil(sq);
+	int sz = 1024/(ce*2+1)/2;
 
 	//several pixels above the point dont allow dilate
 	int ix,iy;
@@ -570,15 +601,35 @@ void drawmap_begin(design* ds, position* pos, u32* map)
 		if(pinid < cnt_po){		//in pinout
 			ox = pos->_out[pinid].x;
 			oy = pos->_out[pinid].y;
-			drawmap_dontdilate(map, ox, oy);
+			drawmap_dontdilate(map, DILATE_BOT|DILATE_TOP, ox, oy);
 		}
 
 		for(int k=0;k<pos->pinviewwire[j].size();k++){
 			int chipid = pos->pinviewwire[j][k].chipid;
 			int footid = pos->pinviewwire[j][k].footid;
-			ix = pos->_chip[chipid].x + pos->_chipfoot[chipid][footid].x;
-			iy = pos->_chip[chipid].y + pos->_chipfoot[chipid][footid].y;
-			drawmap_dontdilate(map, ix, iy);
+			ix = pos->_chipfoot[chipid][footid].x;
+			iy = pos->_chipfoot[chipid][footid].y;
+			int dir;
+			if(ix <= -sz){
+				dir = DILATE_LEFT;
+			}
+			else if(ix >= sz){
+				dir = DILATE_RIGHT;
+			}
+			else if(iy <= -sz){
+				dir = DILATE_TOP;
+			}
+			else if(iy >= sz){
+				dir = DILATE_BOT;
+			}
+			else{
+				printf("%s error: not edge\n", __FUNCTION__);
+				continue;
+			}
+			printf("x=%d y=%d sz=%d dir=%d\n", ix, iy, sz, dir);
+			ix += pos->_chip[chipid].x;
+			iy += pos->_chip[chipid].y;
+			drawmap_dontdilate(map, dir, ix, iy);
 		}
 	}
 }
