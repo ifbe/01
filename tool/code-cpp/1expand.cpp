@@ -1,61 +1,7 @@
-#include "main.hpp"
+#include "util.hpp"
 #define CONFIG_PRINT_HIDE_COMMENTED 0
 
 
-
-void printdesign(design* c){
-	printf("%s{\n", c->name.c_str());
-
-	int cnt = 0;
-	printf("pinout(size=%ld){\n", c->_pinout.size());
-	for(auto p : c->_pinout){
-		printf("	%s\n", p->name.c_str());
-		cnt++;
-	}
-	printf("}pinout(cnt=%d)\n", cnt);
-
-	cnt = 0;
-	printf("pinin(size=%ld){\n", c->_pinin.size());
-	for(auto p : c->_pinin){
-		printf("	%s\n", p->name.c_str());
-		cnt++;
-	}
-	printf("}pinin(cnt=%d)\n", cnt);
-
-	cnt = 0;
-	printf("chip(size=%ld){\n", c->_chip.size());
-	for(auto p : c->_chip){
-		if('/' != p->name.c_str()[0]){
-			cnt++;
-		}
-#if CONFIG_PRINT_HIDE_COMMENTED==1
-		else{
-			continue;
-		}
-#endif
-		printf("	%s : %s\n", p->name.c_str(), p->cname.c_str());
-	}
-	printf("}chip(cnt=%d)\n", cnt);
-
-	cnt = 0;
-	printf("logic(size=%ld){\n", c->_connect.size());
-	for(auto& p : c->_connect){
-		if('/' != p->chipname.c_str()[0]){
-			cnt++;
-		}
-#if CONFIG_PRINT_HIDE_COMMENTED==1
-		else{
-			continue;
-		}
-#endif
-		printf("	%s(", p->chipname.c_str());
-		for(auto& t : p->pinname)printf("%s%c", t.c_str(), (t==p->pinname.back()) ? ')' : ' ');
-		printf("\n");
-	}
-	printf("}logic(cnt=%d)\n", cnt);
-
-	printf("}\n");
-}
 
 
 
@@ -115,53 +61,34 @@ void expand_real(design* out, design* in, wiredef* wi){
 void expand_onelayer(session* sess, design* ds, int last){
 	int sz = ds->_chip.size();
 	int j;
-	int foundinsess = -1;
-	int foundinfile = -1;
-	int foundinlogic = -1;
+	design* founddesign;
+	wiredef* foundwire;
 	for(j=last;j<sz;j++){
-		printf("cname=%s{\n", ds->_chip[j]->cname.c_str());
+		std::string nickname = ds->_chip[j]->name;
+		std::string origname = ds->_chip[j]->cname;
+		printf("%d: nickname=%s origname=%s{\n", j, nickname.c_str(), origname.c_str());
 
-		foundinsess = -1;
-		foundinfile = -1;
-		int k,f;
-		for(f=0;f<sess->file.size();f++){
-			filecontext* ctx = sess->file[f];
-			for(k=0;k<ctx->cx.size();k++){
-				if(ds->_chip[j]->cname == ctx->cx[k]->name){
-					if(ctx->cx[k]->_chip.size() == 0){
-						printf("this is already base element\n");
-						continue;
-					}
-					printf("at file %d, design %d\n", f, k);
-					foundinsess = f;
-					foundinfile = k;
-					break;
-				}
-			}
-		}
-		if(foundinfile < 0){
+		founddesign = finddesign(sess, origname);
+		if(founddesign == 0){
 			printf("not found in file\n");
 			goto prepnext;
 		}
-
-		foundinlogic = -1;
-		for(k=0;k<ds->_connect.size();k++){
-			if(ds->_chip[j]->name == ds->_connect[k]->chipname){
-				printf("at logic %d\n", k);
-				foundinlogic = k;
-				break;
-			}
+		if(founddesign->_chip.size() == 0){
+			printf("this is already base element\n");
+			goto prepnext;
 		}
-		if(foundinlogic < 0){
+
+		foundwire = findwire(ds, nickname);
+		if(foundwire == 0){
 			printf("not found in logic\n");
 			goto prepnext;
 		}
 
-		expand_real(ds, sess->file[foundinsess]->cx[foundinfile], ds->_connect[foundinlogic]);
+		expand_real(ds, founddesign, foundwire);
 
 		//comment this chip and this wire
-		ds->_chip[j]->name = "//" + ds->_chip[j]->name;
-		ds->_connect[foundinlogic]->chipname = "//" + ds->_connect[foundinlogic]->chipname;
+		ds->_chip[j]->name = "//" + nickname;
+		foundwire->chipname = "//" + nickname;
 
 prepnext:
 		printf("}\n");
@@ -170,14 +97,7 @@ prepnext:
 
 design* expand(session* sess, std::string name){
 	int j;
-	design* found = 0;
-	for(auto& ctx : sess->file){
-		for(j=0;j<ctx->cx.size();j++){
-			if(name == ctx->cx[j]->name){
-				found = ctx->cx[j];
-			}
-		}
-	}
+	design* found = finddesign(sess, name);
 	if(0 == found)return 0;
 	printf("\n");
 

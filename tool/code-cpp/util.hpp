@@ -120,3 +120,16 @@ public:
 	//
 	std::vector<std::vector<chipfootpin>> chipviewwire;		//[chip][foot][cid,fid,pid]
 };
+
+
+
+
+void printdesign(design* c);
+void printfilectx(filecontext* ctx);
+void printsession(session* sess);
+
+
+
+
+design* finddesign(session* sess, std::string& name);
+wiredef* findwire(design* ds, std::string& name);
