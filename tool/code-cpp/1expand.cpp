@@ -6,29 +6,35 @@
 
 
 
-std::string translatepinname(std::string s0, design* in, wiredef* wi)
+wiredef::_pinpair translatepinname(wiredef::_pinpair& inpair, design* in, wiredef* wi)
 {
+	wiredef::_pinpair pair;
+
 	//1 pinout: name unchanged
 	int j;
 	for(j=0;j<in->_pinout.size();j++){
-		if(s0 == in->_pinout[j]->name){
-			return wi->pinname[j];
+		if(inpair.nickname == in->_pinout[j]->name){
+			return inpair;
 		}
 	}
 
 	//2 pinin: refname/pinname
 	for(j=0;j<in->_pinin.size();j++){
-		if(s0 == in->_pinin[j]->name){
-			return wi->chipname + "/" + s0;
+		if(inpair.nickname == in->_pinin[j]->name){
+			pair.nickname = wi->chipname + "/" + inpair.nickname;
+			pair.origname = inpair.origname;
+			return pair;
 		}
 	}
 
 	//3 notfound: maybe vcc,gnd...
-	return "?" + s0;
+	pair.nickname = "?" + inpair.nickname;
+	pair.origname = inpair.origname;
+	return pair;
 }
 void expand_real(design* out, design* in, wiredef* wi){
 	printf("in: name=%s\n", in->name.c_str());
-	printf("wi: name=%s, pin=%s...\n", wi->chipname.c_str(), wi->pinname[0].c_str());
+	//printf("wi: name=%s, pinpair.size=%x\n", wi->chipname.c_str(), wi->pinpair.size());
 
 	//inner pin: rename and insert
 	for(auto& p : in->_pinin){
@@ -44,9 +50,9 @@ void expand_real(design* out, design* in, wiredef* wi){
 	for(auto& p : in->_connect){
 		wiredef* tmp = new wiredef(wi->chipname + "/" + p->chipname);
 
-		for(auto q : p->pinname){
-			std::string s = translatepinname(q, in, wi);
-			tmp->addpin(s);
+		for(auto& q : p->pinpair){
+			wiredef::_pinpair pair = translatepinname(q, in, wi);
+			tmp->addpin(pair);
 		}
 
 		out->_connect.push_back(tmp);

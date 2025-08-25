@@ -44,20 +44,21 @@ public:
 
 class wiredef{
 public:
-	struct pinpair{
-		std::string chippin;
-		std::string selfpin;
+	struct _pinpair{
+		std::string nickname;
+		std::string origname;
 	};
 	wiredef(u8* buf, int len);
 	wiredef(std::string s);
 	wiredef(wiredef* c);
 	~wiredef();
-	void addpin(std::string s);
+	void addpin(std::string& s);
+	void addpin(_pinpair& s);
 	void addpin(u8* buf, int len);
 	void parsepin(u8* p, int len);
 public:
 	std::string chipname;
-	std::vector<std::string> pinname;
+	std::vector<_pinpair> pinpair;
 };
 
 class design{

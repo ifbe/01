@@ -2,23 +2,6 @@
 #define CONFIG_DEBUG_PPM_ASTAR 1
 
 
-design* from_sess_find_design(session* sess, std::string& name)
-{
-	int j;
-	for(auto& ctx : sess->file){
-                for(j=0;j<ctx->cx.size();j++){
-                        if(name == ctx->cx[j]->name){
-                                return ctx->cx[j];
-                        }
-                }
-        }
-	return 0;
-}
-void from_design_find_position(design* dsn, std::string& pin)
-{
-}
-
-
 void layout(session* sess, design* ds, position* pos){
 	int cnt_po = ds->_pinout.size();
 	int cnt_pi = ds->_pinin.size();
@@ -78,7 +61,7 @@ void layout(session* sess, design* ds, position* pos){
 
 		//debug
 		printf("index=%d name=%s model=%s\n", findchip, ds->_chip[findchip]->name.c_str(), ds->_chip[findchip]->cname.c_str());
-		design* dsn = from_sess_find_design(sess, ds->_chip[findchip]->cname);
+		design* dsn = finddesign(sess, ds->_chip[findchip]->cname);
 		if(dsn){
 			for(auto& it : dsn->_layout){
 				printf("name=%s pos=%f,%f\n", it.first.c_str(), it.second.x, it.second.y);
@@ -87,15 +70,17 @@ void layout(session* sess, design* ds, position* pos){
 
 		//each pin
 		int m;
-		std::vector<std::string>& pinname = ds->_connect[j]->pinname;
+		std::vector<wiredef::_pinpair>& pinpair = ds->_connect[j]->pinpair;
 		std::vector<pindef*>& po = ds->_pinout;
 		std::vector<pindef*>& pi = ds->_pinin;
 		std::vector<chipfootpin> cfl;
-		for(int k=0;k<pinname.size();k++){
-			printf("->%d,%d,pname=%s,cname=%s\n", j, k, pinname[k].c_str(), dsn->_pinout[k]->name.c_str());
+		for(int k=0;k<pinpair.size();k++){
+			std::string& nickname = pinpair[k].nickname;
+			std::string& origname = pinpair[k].origname;
+			printf("->%d,%d,nickname=%s,origname=%s\n", j, k, nickname.c_str(), origname.c_str());
 			int find = 0;
 			if(dsn){
-				auto it = dsn->_layout.find(dsn->_pinout[k]->name.c_str());
+				auto it = dsn->_layout.find(origname);		//find foot in chip
 				if(it != dsn->_layout.end()){
 					posxyz& pos = it->second;
 					fx = sz * pos.x;
@@ -105,14 +90,14 @@ void layout(session* sess, design* ds, position* pos){
 				}
 			}
 			if(0 == find){
-				fx = -sz + (float)(k+1) * (sz*2) / (pinname.size()+1);		//must convert to float, or crash
+				fx = -sz + (float)(k+1) * (sz*2) / (pinpair.size()+1);		//must convert to float, or crash
 				fy = -sz + 1;
 			}
 			pos->_chipfoot[findchip].push_back({fx, fy, 0.0});
 
 			//pinout
 			for(m=0;m<po.size();m++){
-				if(pinname[k] == po[m]->name){
+				if(nickname == po[m]->name){
 					printf("%d: chip%d.foot%d-po%d\n", j, findchip, k, m);
 					cfl.push_back({findchip, k, m});
 					goto ok;
@@ -120,7 +105,7 @@ void layout(session* sess, design* ds, position* pos){
 			}
 			//pinin
 			for(m=0;m<pi.size();m++){
-				if(pinname[k] == pi[m]->name){
+				if(nickname == pi[m]->name){
 					printf("%d: chip%d.foot%d-pi%d\n", j, findchip, k, m);
 					cfl.push_back({findchip, k, cnt_po+m});
 					goto ok;
@@ -129,7 +114,7 @@ void layout(session* sess, design* ds, position* pos){
 
 			//pinglobal found
 			for(m=0;m<pinglobal.size();m++){
-				if(pinname[k] == pinglobal[m]){
+				if(nickname == pinglobal[m]){
 					printf("%d: chip%d.foot%d-pg%d\n", j, findchip, k, m);
 					cfl.push_back({findchip, k, cnt_po+cnt_pi+m});
 					goto ok;
@@ -137,7 +122,7 @@ void layout(session* sess, design* ds, position* pos){
 			}
 			//pinglobal notfound
 			m = pinglobal.size();
-			pinglobal.push_back(pinname[k]);
+			pinglobal.push_back(nickname);
 			printf("%d: chip%d.foot%d-pg%d\n", j, findchip, k, m);
 			cfl.push_back({findchip, k, cnt_po+cnt_pi+m});
 /*

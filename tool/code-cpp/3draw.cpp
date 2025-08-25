@@ -413,21 +413,12 @@ void drawpinout(design* ds, position* pos, u8* pix){
 		}
 	}
 }
-design* drawpinoutname_findchip(session* sess, std::string name){
-	for(int j=0;j<sess->file.size();j++){
-		for(int k=0;k<sess->file[j]->cx.size();k++){
-			printf("findchip:%d,%d,%s\n", j,k,sess->file[j]->cx[k]->name.c_str());
-			if(name == sess->file[j]->cx[k]->name)return sess->file[j]->cx[k];
-		}
-	}
-	return 0;
-}
 void drawpinoutname(session* sess, design* ds, position* pos, u8* pix){
 	int ix,iy;
 	for(int j=0;j<pos->_chip.size();j++){
 		//find the chip
 		std::string name = ds->_chip[j]->cname;
-		design* ds0 = drawpinoutname_findchip(sess, name);
+		design* ds0 = finddesign(sess, name);
 		if(0 == ds0)continue;
 		//
 		for(int k=0;k<pos->_chipfoot[j].size();k++){

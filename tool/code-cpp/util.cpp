@@ -79,7 +79,7 @@ wiredef::wiredef(wiredef* in){
 	printf("contruct_copy wiredef %s\n", in->chipname.c_str());
 #endif
 	chipname = in->chipname;
-	for(auto p : in->pinname)pinname.push_back(p);
+	for(auto& p : in->pinpair)pinpair.push_back(p);
 }
 wiredef::~wiredef(){
 #if CONFIG_PRINT_DESTRUCT==1
@@ -114,8 +114,14 @@ void wiredef::parsepin(u8* p, int len)
 		}
 	}
 }
-void wiredef::addpin(std::string s){
-	pinname.push_back(s);
+void wiredef::addpin(_pinpair& pair){
+    pinpair.push_back(pair);
+}
+void wiredef::addpin(std::string& s){
+    _pinpair pair;
+    pair.nickname = s;
+    pair.origname = "";
+	pinpair.push_back(pair);
 }
 void wiredef::addpin(u8* buf, int len){
 	int j;
@@ -128,11 +134,11 @@ void wiredef::addpin(u8* buf, int len){
 			break;
 		}
 	}
-    std::string origname((char*)buf, leftend);
 
-    std::string nickname((char*)buf+rightbegin, len-rightbegin);
-
-	pinname.push_back(nickname);
+    _pinpair pair;
+    pair.nickname = std::string((char*)buf+rightbegin, len-rightbegin);
+    pair.origname = std::string((char*)buf, leftend);
+	pinpair.push_back(pair);
 }
 
 
@@ -333,8 +339,8 @@ void printdesign(design* c){
 		}
 #endif
 		printf("	%s(", p->chipname.c_str());
-		for(auto& t : p->pinname)printf("%s%c", t.c_str(), (t==p->pinname.back()) ? ')' : ' ');
-		printf("\n");
+		for(auto& t : p->pinpair)printf("%s@%s ", t.nickname.c_str(), t.origname.c_str());
+		printf(")\n");
 	}
 	printf("}logic(cnt=%d)\n", cnt);
 
