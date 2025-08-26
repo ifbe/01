@@ -2,11 +2,13 @@ myboard{
 pinout{
 	dp
 	dm
+	tx
+	rx
 }
 chip{
 	esp : esp32s3
 }
 logic{
-	esp(io19@dp, io20@dm)
+	esp(io19@dm, io20@dp, txd@tx, rxd@rx)
 }
 }

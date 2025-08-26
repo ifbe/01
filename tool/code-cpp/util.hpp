@@ -68,10 +68,13 @@ public:
 	~design();
 	void shrinkunused();
 public:
+	//design.name
 	std::string name;
+	//design.pin
 	std::vector<pindef*> _pinout;
 	std::vector<pindef*> _pinin;
-	//std::vector<pindef*> _pinglobal;		//todo
+	std::vector<pindef*> _pinglobal;		//todo
+	//design.chip
 	std::vector<chipdef*> _chip;
 	//wire space
 	std::vector<wiredef*> _connect;

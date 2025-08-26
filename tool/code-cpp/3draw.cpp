@@ -162,6 +162,34 @@ void drawascii(u32* screen, u32 rgb, int xx, int yy, u8 ch)
 		}//x
 	}//y
 }
+void drawascii_vertical(u32* screen, u32 rgb, int xx, int yy, u8 ch)
+{
+	u8 temp;
+	u8* points;
+	int x,y,offset;
+	int width = 1024;
+	int height = 1024;
+	int stride = 1024;
+
+	if((xx<0)|(xx+8>width)|(yy<0)|(yy+16>height))return;
+	if((ch<=0x20)|(ch>=0x80))ch = 0x20;
+	points = asciitable + (ch<<4);
+
+	for(x=0;x<16;x++)
+	{
+		temp = points[x];
+		for(y=0;y<8;y++)
+		{
+			offset = stride*(yy+y) + xx-x;
+			if((offset >= 0)&&(offset < stride*height))
+			{
+				if( (temp&0x80) != 0 )screen[offset] = rgb;
+			}
+
+			temp<<=1;
+		}//x
+	}//y
+}
 void drawstring(u32* win, u32 rgb, int x, int y, u8* buf, int len)
 {
 	int j;
@@ -172,6 +200,18 @@ void drawstring(u32* win, u32 rgb, int x, int y, u8* buf, int len)
 	for(j=0;j<len;j++){
 		if(0 == buf[j])break;
 		drawascii(win, rgb, x+j*8, y, buf[j]);
+	}
+}
+void drawstring_vertical(u32* win, u32 rgb, int x, int y, u8* buf, int len)
+{
+	int j;
+	if(0 == buf)return;
+	if(0 == len){
+		for(;len<256;len++)if(buf[len] == 0)break;
+	}
+	for(j=0;j<len;j++){
+		if(0 == buf[j])break;
+		drawascii_vertical(win, rgb, x, y+j*8, buf[j]);
 	}
 }
 void drawstring_atpoint(u32* win, u32 rgb, int x, int y, u8* buf, int len)
@@ -414,7 +454,12 @@ void drawpinout(design* ds, position* pos, u8* pix){
 	}
 }
 void drawpinoutname(session* sess, design* ds, position* pos, u8* pix){
-	int ix,iy;
+	int cnt_chip = pos->_chip.size();
+	float sq = sqrt(cnt_chip);
+	int ce = ceil(sq);
+	int sz = 1024/(ce*2+1)/2;
+
+	int ix,iy,dx,dy;
 	for(int j=0;j<pos->_chip.size();j++){
 		//find the chip
 		std::string name = ds->_chip[j]->cname;
@@ -423,13 +468,28 @@ void drawpinoutname(session* sess, design* ds, position* pos, u8* pix){
 		//
 		for(int k=0;k<pos->_chipfoot[j].size();k++){
 			//printf("drawpinoutname: %d,%d,%p\n", j, k, ds0);
-			ix = pos->_chip[j].x + pos->_chipfoot[j][k].x;
-			iy = pos->_chip[j].y + pos->_chipfoot[j][k].y;
-			drawascii((u32*)pix, 0xffffff, ix-4, iy, ds0->_pinout[k]->name.c_str()[0]);
+			dx = pos->_chipfoot[j][k].x;
+			dy = pos->_chipfoot[j][k].y;
+			ix = pos->_chip[j].x + dx;
+			iy = pos->_chip[j].y + dy;
+			if(dx <= -sz){
+				//drawascii((u32*)pix, 0xffffff, ix-4, iy, ds0->_pinout[k]->name.c_str()[0]);
+				drawstring((u32*)pix, 0xffffff, ix, iy-8, (u8*)ds0->_pinout[k]->name.c_str(), 0);
+			}
+			else if(dx >= sz){
+				int len = ds0->_pinout[k]->name.size();
+				drawstring((u32*)pix, 0xffffff, ix-8*len, iy-8, (u8*)ds0->_pinout[k]->name.c_str(), 0);
+			}
+			else if(iy <= -sz){
+				drawstring_vertical((u32*)pix, 0xffffff, ix+8, iy, (u8*)ds0->_pinout[k]->name.c_str(), 0);
+			}
+			else if(iy >= sz){
+				int len = ds0->_pinout[k]->name.size();
+				drawstring_vertical((u32*)pix, 0xffffff, ix+8, iy-8*len, (u8*)ds0->_pinout[k]->name.c_str(), 0);
+			}
 		}
 	}
 }
-
 
 
 
@@ -662,8 +722,11 @@ void draw_map2pix(u32* pix, u32* map, std::vector<u32> colortable)
 //initial value = gap between two chip
 void eachchip_initradius(std::vector<int>& perchipinfo, position* pos)
 {
+	int sz;
 	for(int j=0;j<pos->_chip.size();j++){
-		perchipinfo.push_back(pos->_chipfoot[j].size());
+		sz = pos->_chipfoot[j].size();
+		if(sz > 4)sz = 4;
+		perchipinfo.push_back(sz);
 	}
 }
 int wireid2radius(int wireid)
@@ -1107,6 +1170,8 @@ void drawwire_astar_lesspinfirst(design* ds, position* pos, u32* pix){
 	});
 
 	printf("go\n");
+	draw_globalpin(pix, pos);
+
 	for(int j=0;j<perpinpos.size();j++){
 		int pinid = -1;
 		if(perpinpos[j].size()>1)pinid = perpinpos[j][1].pinid;
@@ -1121,11 +1186,11 @@ void drawwire_astar_lesspinfirst(design* ds, position* pos, u32* pix){
 
 		printf("}index=%d,ret=%d\n", j, ret);
 		printf("\n\n");
-	}
 
-	printf("map2pix\n");
-	draw_map2pix(pix, map, colortable);
-	draw_globalpin(pix, pos);
+		printf("map2pix\n");
+		draw_map2pix(pix, map, colortable);
+		writeppm((u8*)pix, 1024*4, 1024, 1024, "wire_astar.ppm");
+	}
 
 	printf("free\n");
 	free(history);
@@ -1199,7 +1264,6 @@ void draw_astar(session* sess, design* ds, position* pos, u8* pix){
 	//drawwire_astar(ds, pos, (u32*)pix);
 	drawwire_astar_lesspinfirst(ds, pos, (u32*)pix);
 
-	writeppm(pix, 1024*4, 1024, 1024, "wire_astar.ppm");
 	printf("}%s\n",__FUNCTION__);
 }
 void draw(session* sess, design* ds, position* pos, u8* pix){
@@ -1209,6 +1273,6 @@ void draw(session* sess, design* ds, position* pos, u8* pix){
 	draw_onlypinout(ds, pos, pix);
 */
 	draw_chipview(ds, pos, pix);
-	draw_pinview(ds, pos, pix);
+	//draw_pinview(ds, pos, pix);
 	draw_astar(sess, ds, pos, pix);
 }
