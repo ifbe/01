@@ -11,4 +11,11 @@ chip{
 logic{
 	esp(io19@dm, io20@dp, txd@tx, rxd@rx)
 }
+layout{
+	esp(-0.3, -0.2)
+	dm(-0.12, 1)
+	dp(-0.13, 1)
+	tx(0.51, 1)
+	rx(0.52, 1)
+}
 }

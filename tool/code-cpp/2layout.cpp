@@ -45,17 +45,11 @@ int findpin(design* userchip, std::string nickname)
 	//printf("%d: chip%d.foot%d-pg%d\n", j, findchip, k, m);
 	return cnt_po + cnt_pi + m;
 }
-void layout_pin(session* sess, design* userchip, int chipidx, position* pos){
+void layout_usedchip(session* sess, design* userchip, int chipidx, position* pos){
 	int cnt_chip = userchip->_chip.size();
 
 	std::string chipname_nick = userchip->_chip[chipidx]->name;
 	std::string chipname_orig = userchip->_chip[chipidx]->cname;
-
-	wiredef* wd = findwire(userchip, chipname_nick);
-	if(0 == wd)return;
-
-	design* origchip = finddesign(sess, chipname_orig);
-	if(0 == origchip)return;
 
 	//chip position
 	float sq = sqrt(cnt_chip);
@@ -63,16 +57,30 @@ void layout_pin(session* sess, design* userchip, int chipidx, position* pos){
 	int sz = 1024/(ce*2+1)/2;
 	printf("sqrt=%f,ceil=%d\n", sq, ce);
 
+	bool gotpos = 0;
 	float fx, fy;
-	if(0){
+	auto it = userchip->_layout.find(chipname_nick);
+	if(it != userchip->_layout.end()){
+		gotpos = true;
+		fx = 512 + 512*it->second.x;
+		fy = 512 - 512*it->second.y;
+		printf("chippos=%f,%f\n", fx, fy);
 	}
-	else{
+	if(!gotpos){
 		fx = 1024*(float)((chipidx%ce)*2+1.5)/(ce*2+1);
 		fy = 1024*(float)((chipidx/ce)*2+1.5)/(ce*2+1);
 	}
 	printf("chip[%d]: nick=%s orig=%s pos=%f,%f\n",
 		chipidx, chipname_nick.c_str(), chipname_orig.c_str(), fx, fy);
 	pos->_chip.push_back({fx, fy, 0});
+
+
+	//pin position
+	wiredef* wd = findwire(userchip, chipname_nick);
+	if(0 == wd)return;
+
+	design* origchip = finddesign(sess, chipname_orig);
+	if(0 == origchip)return;
 
 	int k;
 	std::vector<chipfootpin> cfp;
@@ -148,15 +156,26 @@ void layout(session* sess, design* ds, position* pos){
 	printf("chipview: generate pos\n");
 	pos->_chipfoot.resize(cnt_chip);
 	for(int j=0;j<cnt_chip;j++){
-		layout_pin(sess, ds, j, pos);
+		layout_usedchip(sess, ds, j, pos);
 	}
 
 	float fx,fy;
 
 	//pinout at top
 	for(int j=0;j<cnt_po;j++){
-		fx = 1024*(float)(j+1)/(cnt_po+1);
-		fy = 0.0;
+		bool located = 0;
+		auto it = ds->_layout.find(ds->_pinout[j]->name);  //find foot in chip
+		if(it != ds->_layout.end()){
+			posxyz& pos = it->second;
+			fx = 512 + 512 * pos.x;
+			fy = 512 - 512 * pos.y;
+			located = true;
+			printf("user pos:%f,%f,%f,%f\n", pos.x, pos.y, fx, fy);
+		}
+		if(!located){
+			fx = 1024*(float)(j+1)/(cnt_po+1);
+			fy = 0.0;
+		}
 		pos->_out.push_back({fx, fy, 0});
 		printf("out %d: %f,%f\n", j, fx, fy);
 	}

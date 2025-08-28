@@ -159,6 +159,7 @@ design::design(design* c){
 	for(auto p : c->_pinin)_pinin.push_back(new pindef(p));
 	for(auto p : c->_chip)_chip.push_back(new chipdef(p));
 	for(auto p : c->_connect)_connect.push_back(new wiredef(p));
+	_layout = c->_layout;
 }
 design::~design(){
 #if CONFIG_PRINT_DESTRUCT==1
@@ -328,7 +329,7 @@ void printdesign(design* c){
 	printf("}chip(cnt=%d)\n", cnt);
 
 	cnt = 0;
-	printf("logic(size=%ld){\n", c->_connect.size());
+	printf("wiring(size=%ld){\n", c->_connect.size());
 	for(auto& p : c->_connect){
 		if('/' != p->chipname.c_str()[0]){
 			cnt++;
@@ -342,7 +343,14 @@ void printdesign(design* c){
 		for(auto& t : p->pinpair)printf("%s@%s ", t.nickname.c_str(), t.origname.c_str());
 		printf(")\n");
 	}
-	printf("}logic(cnt=%d)\n", cnt);
+	printf("}wiring(cnt=%d)\n", cnt);
+
+	cnt = 0;
+	printf("layout(size=%ld){\n", c->_layout.size());
+	for(auto& p : c->_layout){
+		printf("	%s(%f,%f)\n", p.first.c_str(), p.second.x, p.second.y);
+	}
+	printf("}layout(cnt=%d)\n", cnt);
 
 	printf("}\n");
 }
